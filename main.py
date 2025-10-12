@@ -186,13 +186,29 @@ async def delete_expense(request: Request, index: int):
         return RedirectResponse(url="/login", status_code=302)
 
     try:
+        # Read all expenses
         with open(CSV_FILE, mode='r') as file:
             expenses = list(csv.reader(file))
-        if 0 <= index < len(expenses):
-            expenses.pop(index)
+
+        # Sort the same way (latest first)
+        sorted_expenses = sorted(
+            expenses,
+            key=lambda x: datetime.strptime(x[3], "%Y-%m-%d %H:%M:%S"),
+            reverse=True
+        )
+
+        # Identify which entry the user wants to delete
+        if 0 <= index < len(sorted_expenses):
+            to_delete = sorted_expenses[index]
+
+            # Remove the exact matching entry from the original list
+            expenses.remove(to_delete)
+
+            # Save back to CSV
             with open(CSV_FILE, mode='w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerows(expenses)
+
     except Exception as e:
         print("Delete error:", e)
 
@@ -204,10 +220,22 @@ async def edit_expense_form(request: Request, index: int):
         return RedirectResponse(url="/login", status_code=302)
 
     try:
+        # Read all expenses
         with open(CSV_FILE, mode='r') as file:
             expenses = list(csv.reader(file))
-        if 0 <= index < len(expenses):
-            expense = expenses[index]
+
+        # Sort them same way as home page
+        sorted_expenses = sorted(
+            expenses,
+            key=lambda x: datetime.strptime(x[3], "%Y-%m-%d %H:%M:%S"),
+            reverse=True
+        )
+
+        # Pick the correct record (as per what user clicked)
+        if 0 <= index < len(sorted_expenses):
+            expense = sorted_expenses[index]
+
+            # Render edit form with correct data
             return templates.TemplateResponse("edit.html", {
                 "request": request,
                 "index": index,
@@ -215,10 +243,12 @@ async def edit_expense_form(request: Request, index: int):
                 "category": expense[1],
                 "description": expense[2]
             })
+
     except Exception as e:
         print("Error loading edit form:", e)
 
     return RedirectResponse(url="/", status_code=302)
+
 
 @app.post("/edit/{index}")
 async def save_edited_expense(
@@ -232,14 +262,33 @@ async def save_edited_expense(
         return RedirectResponse(url="/login", status_code=302)
 
     try:
+        # Read all expenses
         with open(CSV_FILE, mode='r') as file:
             expenses = list(csv.reader(file))
-        if 0 <= index < len(expenses):
-            old_date = expenses[index][3]
-            expenses[index] = [amount, category, description, old_date]
+
+        # Sort like homepage (latest first)
+        sorted_expenses = sorted(
+            expenses,
+            key=lambda x: datetime.strptime(x[3], "%Y-%m-%d %H:%M:%S"),
+            reverse=True
+        )
+
+        # Identify entry being edited
+        if 0 <= index < len(sorted_expenses):
+            to_edit = sorted_expenses[index]
+            old_date = to_edit[3]
+
+            # Find the same record in original list and update
+            for i, row in enumerate(expenses):
+                if row == to_edit:
+                    expenses[i] = [amount, category, description, old_date]
+                    break
+
+            # Save back to CSV
             with open(CSV_FILE, mode='w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerows(expenses)
+
     except Exception as e:
         print("Error editing expense:", e)
 
