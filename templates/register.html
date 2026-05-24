@@ -3,25 +3,30 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login</title>
+    <title>Register</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Login</h1>
-        <form action="/login" method="post" class="card">
+        <h1>Register</h1>
+        <form action="/register" method="post" class="card">
             <label>Username:</label>
             <input type="text" name="username" required>
 
             <label>Password:</label>
             <input type="password" name="password" required>
 
-            <button type="submit">Login</button>
+            <label>Confirm Password:</label>
+            <input type="password" name="confirm" required>
+
+            <button type="submit">Register</button>
         </form>
 
         {% if error %}
-        <p class="error">{{ error }}</p>
+            <p class="error">{{ error }}</p>
         {% endif %}
+
+        <p>Already have an account? <a href="/login">Login here</a></p>
     </div>
 </body>
 </html>

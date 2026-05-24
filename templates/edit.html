@@ -1,26 +1,28 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Edit Expense</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>✏️ Edit Expense</h1>
-        <form action="/edit/{{ index }}" method="post" class="card">
+        <h1>Edit Expense</h1>
+        <form action="/edit/{{ expense_id }}" method="post" class="card">
             <label>Amount (₹):</label>
-            <input type="number" name="amount" step="0.01" value="{{ amount }}" required>
+            <input type="number" name="amount" step="0.01" min="0.01" value="{{ amount }}" required>
 
             <label>Category:</label>
-            <input type="text" name="category" value="{{ category | e }}" required>
+            <input type="text" name="category" value="{{ category }}" required>
 
             <label>Description:</label>
-            <input type="text" name="description" value="{{ description | e }}">
+            <input type="text" name="description" value="{{ description }}">
 
             <button type="submit">Save Changes</button>
         </form>
 
-        <p><a href="/" class="back-link">⬅️ Back to Dashboard</a></p>
+        <p><a href="/" class="back-link">Back to Dashboard</a></p>
     </div>
 </body>
 </html>

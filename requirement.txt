@@ -4,3 +4,4 @@ python-dotenv
 itsdangerous
 jinja2
 matplotlib
+python-multipart

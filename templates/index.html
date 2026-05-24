@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Expense Tracker Web</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="container">
-        <h1>💸 Expense Tracker</h1>
-        <div style="text-align: right; margin-bottom: 20px;">
+        <h1>Expense Tracker</h1>
+        <div class="top-actions">
             <a href="/logout" class="logout-btn">Logout</a>
         </div>
 
@@ -44,13 +46,20 @@
                     </tr>
                     {% for expense in expenses %}
                     <tr>
-                        <td>{{ expense[0] }}</td>
-                        <td>{{ expense[1] | e }}</td>
-                        <td>{{ expense[2] | e }}</td>
-                        <td>{{ expense[3] }}</td>
-                        <td>
-                            <a href="/edit/{{ loop.index0 }}">✏️ Edit</a> | <a href="/delete/{{ loop.index0 }}" onclick="return confirm('Are you sure you want to delete this expense?');">🗑️ Delete</a>
+                        <td>₹{{ "%.2f"|format(expense.amount) }}</td>
+                        <td>{{ expense.category }}</td>
+                        <td>{{ expense.description }}</td>
+                        <td>{{ expense.date }}</td>
+                        <td class="table-actions">
+                            <a href="/edit/{{ expense.id }}">Edit</a>
+                            <form action="/delete/{{ expense.id }}" method="post" onsubmit="return confirm('Are you sure you want to delete this expense?');">
+                                <button type="submit" class="link-button danger">Delete</button>
+                            </form>
                         </td>    
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="empty-state">No expenses added yet.</td>
                     </tr>
                     {% endfor %}
                 </table>
@@ -58,17 +67,19 @@
         </section>
 
         <section class="card">
-            <h2>📅 Monthly Totals</h2>
+            <h2>Monthly Totals</h2>
             <div class="total-bar">
-                <strong>💰 Total Spent:</strong> ₹{{ "%.2f"|format(total_spent) }}
+                <strong>Total Spent:</strong> ₹{{ "%.2f"|format(total_spent) }}
             </div>
             <ul>
                 {% for month, total in monthly_totals %}
                     <li>{{ month }}: ₹{{ "%.2f"|format(total) }}</li>
+                {% else %}
+                    <li>No monthly totals yet.</li>
                 {% endfor %}
             </ul>
-            <h2 style="margin-bottom: 10px;">📊 Monthly Spending Chart</h2>
-            <img src="{{ chart_url }}" alt="Monthly Chart" style="max-width: 100%; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">
+            <h2 class="chart-heading">Monthly Spending Chart</h2>
+            <img src="{{ chart_url }}" alt="Monthly spending chart" class="chart-image">
         </section>
     </div>
 </body>
