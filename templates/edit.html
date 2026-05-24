@@ -10,14 +10,28 @@
     <div class="container">
         <h1>Edit Expense</h1>
         <form action="/edit/{{ expense_id }}" method="post" class="card">
-            <label>Amount (₹):</label>
-            <input type="number" name="amount" step="0.01" min="0.01" value="{{ amount }}" required>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-            <label>Category:</label>
-            <input type="text" name="category" value="{{ category }}" required>
+            <label>
+                Amount (₹)
+                <input type="number" name="amount" step="0.01" min="0.01" value="{{ amount }}" required>
+            </label>
 
-            <label>Description:</label>
-            <input type="text" name="description" value="{{ description }}">
+            <label>
+                Category
+                <input list="category-options" name="category" value="{{ category }}" required>
+            </label>
+
+            <label>
+                Description
+                <input type="text" name="description" value="{{ description }}">
+            </label>
+
+            <datalist id="category-options">
+                {% for category_name in categories %}
+                <option value="{{ category_name }}"></option>
+                {% endfor %}
+            </datalist>
 
             <button type="submit">Save Changes</button>
         </form>

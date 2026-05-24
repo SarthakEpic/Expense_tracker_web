@@ -10,11 +10,17 @@
     <div class="container">
         <h1>Login</h1>
         <form action="/login" method="post" class="card">
-            <label>Username:</label>
-            <input type="text" name="username" required>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-            <label>Password:</label>
-            <input type="password" name="password" required>
+            <label>
+                Username
+                <input type="text" name="username" required>
+            </label>
+
+            <label>
+                Password
+                <input type="password" name="password" required>
+            </label>
 
             <button type="submit">Login</button>
         </form>

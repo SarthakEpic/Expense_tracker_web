@@ -5,3 +5,5 @@ itsdangerous
 jinja2
 matplotlib
 python-multipart
+pytest
+httpx

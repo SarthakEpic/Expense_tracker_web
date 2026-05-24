@@ -1,10 +1,23 @@
+import hashlib
+import os
 from getpass import getpass
 from pathlib import Path
 from secrets import token_urlsafe
 
 
 ENV_PATH = Path(".env")
-REQUIRED_KEYS = ("APP_USERNAME", "APP_PASSWORD", "SECRET_KEY")
+PASSWORD_ITERATIONS = 120_000
+
+
+def hash_password(password):
+    salt = os.urandom(16).hex()
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        PASSWORD_ITERATIONS,
+    ).hex()
+    return f"pbkdf2_sha256${PASSWORD_ITERATIONS}${salt}${digest}"
 
 
 def read_env():
@@ -21,9 +34,12 @@ def read_env():
 
 
 def write_env(values):
-    ENV_PATH.write_text(
-        "\n".join(f"{key}={values[key]}" for key in REQUIRED_KEYS) + "\n"
-    )
+    lines = [
+        f"APP_USERNAME={values['APP_USERNAME']}",
+        f"APP_PASSWORD_HASH={values['APP_PASSWORD_HASH']}",
+        f"SECRET_KEY={values['SECRET_KEY']}",
+    ]
+    ENV_PATH.write_text("\n".join(lines) + "\n")
 
 
 def main():
@@ -35,7 +51,7 @@ def main():
         raise SystemExit("Username and password are required.")
 
     values["APP_USERNAME"] = username
-    values["APP_PASSWORD"] = password
+    values["APP_PASSWORD_HASH"] = hash_password(password)
     values["SECRET_KEY"] = values.get("SECRET_KEY") or token_urlsafe(32)
     write_env(values)
     print(f"Credentials for '{username}' saved to .env")
