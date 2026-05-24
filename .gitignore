@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
+expenses.csv
+static/monthly_chart.png
+.pytest_cache/
