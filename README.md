@@ -21,8 +21,6 @@ Track daily expenses, view spending insights, generate charts, and export report
 
 ## 📸 Screenshots
 
-> Add your screenshots here after uploading images.
-
 ```md
 ![Dashboard](screenshots/dashboard.png)
 ![Reports](screenshots/reports.png)
@@ -197,7 +195,7 @@ Feel free to fork the repository and submit a pull request.
 
 # 📄 License
 
-This project is open-source and available under the MIT License.
+
 
 ---
 
