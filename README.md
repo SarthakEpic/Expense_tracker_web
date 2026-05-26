@@ -1,79 +1,206 @@
-# Expense Tracker Web
+# 💸 Expense Tracker Web
 
-A small FastAPI web app for tracking personal expenses. It supports login, SQLite-backed expense storage, category suggestions, filters, reports, charts, and CSV export.
+A lightweight personal expense tracker built with FastAPI and SQLite.  
+Track daily expenses, view spending insights, generate charts, and export reports — all from a clean web interface.
 
-## Features
+---
 
-- Single-user login with hashed password support
-- SQLite database storage
-- Add, edit, and delete expenses
-- Category suggestions based on previous entries
-- Filter expenses by category, month, and year
-- Monthly, yearly, and category totals
-- Monthly spending chart generated with Matplotlib
-- CSV export for the currently filtered view
-- CSRF protection on form submissions
-- Pytest coverage for the main user flows
+## ✨ Features
 
-## Project Structure
+- 🔐 Secure single-user authentication
+- 💰 Add, edit, and delete expenses
+- 🧠 Smart category suggestions
+- 📊 Monthly, yearly, and category-based reports
+- 📈 Spending charts with Matplotlib
+- 📂 CSV export support
+- 🛡️ CSRF protection
+- 🧪 Pytest test coverage
+- 🗄️ SQLite database storage
 
-```text
-.
-├── main.py              # FastAPI routes, auth, CSRF, reports, export
-├── database.py          # SQLite setup and expense queries
-├── create_user.py       # Helper to create hashed .env credentials
-├── templates/           # Jinja pages
-├── static/style.css     # App styling
-├── tests/               # Pytest tests
-├── requirement.txt      # Python dependencies
-└── .env.example         # Example environment config
+---
+
+## 📸 Screenshots
+
+> Add your screenshots here after uploading images.
+
+```md
+![Dashboard](screenshots/dashboard.png)
+![Reports](screenshots/reports.png)
 ```
 
-## Setup
+---
 
-Create and activate a virtual environment:
+# 🛠️ Tech Stack
+
+- FastAPI
+- SQLite
+- Jinja2 Templates
+- Matplotlib
+- Pytest
+- HTML/CSS
+
+---
+
+# 📁 Project Structure
+
+```text
+expense-tracker-web/
+│
+├── main.py              # FastAPI routes and app logic
+├── database.py          # SQLite setup and queries
+├── create_user.py       # Generate hashed credentials
+├── templates/           # Jinja2 templates
+├── static/
+│   └── style.css        # Styling
+├── tests/               # Pytest test suite
+├── requirements.txt     # Dependencies
+├── .env.example         # Example environment variables
+├── .gitignore
+└── README.md
+```
+
+---
+
+# 🚀 Getting Started
+
+## 1️⃣ Clone the Repository
+
+```bash
+git clone https://github.com/your-username/expense-tracker-web.git
+cd expense-tracker-web
+```
+
+---
+
+## 2️⃣ Create a Virtual Environment
+
+### Windows
 
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
-Install dependencies:
+### Linux / Mac
 
 ```bash
-pip install -r requirement.txt
+python3 -m venv venv
+source venv/bin/activate
 ```
 
-Create your local credentials:
+---
+
+## 3️⃣ Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 4️⃣ Create Credentials
+
+Run:
 
 ```bash
 python create_user.py
 ```
 
-This writes a local `.env` file with `APP_USERNAME`, `APP_PASSWORD_HASH`, and `SECRET_KEY`.
+This generates a local `.env` file containing:
 
-## Run
+```env
+APP_USERNAME=your_username
+APP_PASSWORD_HASH=your_password_hash
+SECRET_KEY=your_secret_key
+```
+
+---
+
+# ▶️ Run the Application
 
 ```bash
 uvicorn main:app --reload
 ```
 
-Open:
+Open in browser:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-## Test
+---
+
+# 🧪 Run Tests
 
 ```bash
 python -m pytest
 ```
 
-## Data Notes
+---
 
-The app stores live data in `expenses.db`, which is intentionally ignored by Git. If an old `expenses.csv` file exists, the app can migrate it into SQLite on startup when the database is empty.
+# 📊 Features Overview
 
-## Security Notes
+| Feature | Description |
+|---|---|
+| Authentication | Secure hashed login system |
+| Expense Tracking | Add, edit, delete expenses |
+| Reports | Monthly & yearly summaries |
+| Charts | Visual spending analytics |
+| CSV Export | Export filtered data |
+| SQLite Storage | Lightweight local database |
 
-Do not commit `.env`, database files, or exported CSV files. The app is designed for a local/small personal tracker, not as a production multi-user finance system.
+---
+
+# 🔒 Security Notes
+
+This project is intended for personal/local usage and learning purposes.
+
+Do NOT commit:
+- `.env`
+- Database files
+- Exported CSV files
+
+The application includes:
+- Password hashing
+- CSRF protection
+- Environment-based secrets
+
+---
+
+# 📦 Data Storage
+
+- Expense data is stored in `expenses.db`
+- Database files are ignored by Git
+- Existing CSV data can optionally migrate into SQLite on startup
+
+---
+
+# 🌟 Future Improvements
+
+- Multi-user support
+- Budget tracking
+- REST API endpoints
+- Docker deployment
+- Cloud database support
+- Dark mode UI
+- Advanced analytics dashboard
+
+---
+
+# 🤝 Contributing
+
+Contributions, suggestions, and improvements are welcome.
+
+Feel free to fork the repository and submit a pull request.
+
+---
+
+# 📄 License
+
+This project is open-source and available under the MIT License.
+
+---
+
+# ⭐ Support
+
+If you like this project, consider giving it a star on GitHub!
