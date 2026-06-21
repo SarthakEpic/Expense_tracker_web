@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Budgets | Expense Tracker{% endblock %}
+{% block content %}
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Budget controls</p>
+            <h2>Current month category limits</h2>
+        </div>
+        <a href="/reports?msg=budget_draft" class="primary-button subtle">Create Budget</a>
+    </div>
+    <div class="budget-grid">
+        {% for budget in budget_rows %}
+        <article class="budget-detail-card">
+            <div class="budget-head">
+                <div>
+                    <p>{{ budget.category }} Budget</p>
+                    <strong>₹{{ "%.0f"|format(budget.spent) }} <span>/ ₹{{ "%.0f"|format(budget.limit) }}</span></strong>
+                </div>
+                <b class="status-chip {{ budget.status|lower|replace(' ', '-') }}">{{ budget.status }}</b>
+            </div>
+            <div class="progress-track large">
+                <span style="width: {{ budget.usage|round(1) }}%"></span>
+            </div>
+            <div class="budget-foot">
+                <span>{{ "%.0f"|format(budget.actual_usage) }}% used</span>
+                <span>₹{{ "%.0f"|format(budget.remaining) }} remaining</span>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="page-grid split">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Monthly posture</p>
+                <h2>Usage summary</h2>
+            </div>
+        </div>
+        <div class="stack-list">
+            {% for budget in budget_rows %}
+            <div class="stack-row">
+                <div>
+                    <strong>{{ budget.category }}</strong>
+                    <span>{{ budget.status }}</span>
+                </div>
+                <div class="stack-bar"><span style="width: {{ budget.usage|round(1) }}%"></span></div>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">How it works</p>
+                <h2>Budget logic</h2>
+            </div>
+        </div>
+        <div class="info-card-list">
+            <article class="info-card">
+                <strong>Safe</strong>
+                <p>Below 80% of the category limit for the current month.</p>
+            </article>
+            <article class="info-card">
+                <strong>Warning</strong>
+                <p>Between 80% and 100%, which is where the dashboard starts surfacing watchlist alerts.</p>
+            </article>
+            <article class="info-card">
+                <strong>Over Budget</strong>
+                <p>Above 100%, which helps the prototype keep the “future controls” visible without pretending they are automated.</p>
+            </article>
+        </div>
+    </article>
+</section>
+{% endblock %}

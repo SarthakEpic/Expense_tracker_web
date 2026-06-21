@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Coming Soon | Expense Tracker{% endblock %}
+{% block content %}
+<section class="coming-grid">
+    {% for feature in coming_soon_features %}
+    <article class="feature-card">
+        <span class="feature-tag">{{ feature.status }}</span>
+        <h2>{{ feature.title }}</h2>
+        <p>{{ feature["copy"] }}</p>
+    </article>
+    {% endfor %}
+</section>
+{% endblock %}

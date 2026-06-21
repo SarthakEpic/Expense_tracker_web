@@ -1,31 +1,56 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Edit Expense</title>
+    <title>Edit Transaction | Expense Tracker</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
-    <div class="container">
-        <h1>Edit Expense</h1>
-        <form action="/edit/{{ expense_id }}" method="post" class="card">
+<body class="auth-surface">
+    <main class="auth-page">
+        <form action="/edit/{{ expense_id }}" method="post" class="auth-card edit-card premium-card">
+            <p class="eyebrow">Transaction detail</p>
+            <h1>Edit Transaction</h1>
+            <p class="subtitle">Update the amount, category, timing, and settlement state.</p>
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-            <label>
-                Amount (₹)
-                <input type="number" name="amount" step="0.01" min="0.01" value="{{ amount }}" required>
-            </label>
+            <div class="auth-grid">
+                <label>
+                    Type
+                    <select name="transaction_type">
+                        <option value="expense" {% if transaction_type == "expense" %}selected{% endif %}>Expense</option>
+                        <option value="income" {% if transaction_type == "income" %}selected{% endif %}>Income</option>
+                    </select>
+                </label>
 
-            <label>
-                Category
-                <input list="category-options" name="category" value="{{ category }}" required>
-            </label>
+                <label>
+                    Amount (₹)
+                    <input type="number" name="amount" step="0.01" min="0.01" value="{{ amount }}" required>
+                </label>
 
-            <label>
-                Description
-                <input type="text" name="description" value="{{ description }}">
-            </label>
+                <label>
+                    Category
+                    <input list="category-options" name="category" value="{{ category }}" required>
+                </label>
+
+                <label>
+                    Date
+                    <input type="datetime-local" name="transaction_date" value="{{ transaction_date }}" required>
+                </label>
+
+                <label class="auth-span">
+                    Description
+                    <input type="text" name="description" value="{{ description }}">
+                </label>
+
+                <label>
+                    Status
+                    <select name="status">
+                        <option value="completed" {% if status == "completed" %}selected{% endif %}>Completed</option>
+                        <option value="pending" {% if status == "pending" %}selected{% endif %}>Pending</option>
+                    </select>
+                </label>
+            </div>
 
             <datalist id="category-options">
                 {% for category_name in categories %}
@@ -33,10 +58,11 @@
                 {% endfor %}
             </datalist>
 
-            <button type="submit">Save Changes</button>
+            <div class="drawer-actions">
+                <a href="/transactions" class="secondary-button">Back</a>
+                <button type="submit" class="primary-button">Save Changes</button>
+            </div>
         </form>
-
-        <p><a href="/" class="back-link">Back to Dashboard</a></p>
-    </div>
+    </main>
 </body>
 </html>

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Settings | Expense Tracker{% endblock %}
+{% block content %}
+<section class="page-grid split">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Profile</p>
+                <h2>Workspace owner</h2>
+            </div>
+        </div>
+        <div class="settings-card">
+            <div class="avatar large">{{ user_initial }}</div>
+            <div>
+                <strong>{{ user_name }}</strong>
+                <p>{{ user_email }}</p>
+            </div>
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Theme</p>
+                <h2>Appearance</h2>
+            </div>
+        </div>
+        <div class="theme-toggle">
+            <button type="button" class="theme-option active" data-theme-value="light">Light</button>
+            <button type="button" class="theme-option" data-theme-value="dark">Dark</button>
+        </div>
+        <p class="support-copy">Theme selection persists in your browser so the prototype feels like a real product preference.</p>
+    </article>
+</section>
+
+<section class="page-grid split">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Preferences</p>
+                <h2>Defaults</h2>
+            </div>
+        </div>
+        <div class="settings-list">
+            <label class="toggle-row">
+                <span>Notifications</span>
+                <input type="checkbox" checked>
+            </label>
+            <label class="toggle-row">
+                <span>Security review reminders</span>
+                <input type="checkbox" checked>
+            </label>
+            <label class="toggle-row">
+                <span>Compact currency formatting</span>
+                <input type="checkbox">
+            </label>
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Currency</p>
+                <h2>Reporting denomination</h2>
+            </div>
+        </div>
+        <div class="info-card-list">
+            <article class="info-card selected-card">
+                <strong>INR</strong>
+                <p>Primary display currency for balances, reports, and budget cards.</p>
+            </article>
+            <article class="info-card">
+                <strong>USD</strong>
+                <p>Visible as a future preference once multi-currency support is introduced.</p>
+            </article>
+        </div>
+    </article>
+</section>
+{% endblock %}

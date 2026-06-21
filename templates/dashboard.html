@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | Expense Tracker{% endblock %}
+{% block content %}
+<section class="dashboard-grid">
+    <article class="hero-card">
+        <div class="hero-copy">
+            <p>Current Balance</p>
+            <strong>{% if balance < 0 %}-{% endif %}₹{{ "%.0f"|format(balance_abs) }}</strong>
+            <span class="{% if income_change >= 0 %}trend-up{% else %}trend-down{% endif %}">
+                {% if income_change >= 0 %}↑{% else %}↓{% endif %} {{ "%.1f"|format(income_change|abs) }}% from last month
+            </span>
+        </div>
+        <div class="hero-mini">
+            <div>
+                <span>Pending</span>
+                <strong>₹{{ "%.0f"|format(pending_total) }}</strong>
+            </div>
+            <div>
+                <span>Average expense</span>
+                <strong>₹{{ "%.0f"|format(average_expense) }}</strong>
+            </div>
+        </div>
+    </article>
+
+    <div class="kpi-grid">
+        <article class="kpi-card">
+            <span class="card-icon income"></span>
+            <p>Income</p>
+            <strong>₹{{ "%.0f"|format(total_income) }}</strong>
+            <span class="{% if income_change >= 0 %}trend-up{% else %}trend-down{% endif %}">
+                {% if income_change >= 0 %}↑{% else %}↓{% endif %} {{ "%.1f"|format(income_change|abs) }}%
+            </span>
+        </article>
+        <article class="kpi-card">
+            <span class="card-icon expense"></span>
+            <p>Expenses</p>
+            <strong>₹{{ "%.0f"|format(total_spent) }}</strong>
+            <span class="{% if expense_change <= 0 %}trend-up{% else %}trend-down{% endif %}">
+                {% if expense_change <= 0 %}↓{% else %}↑{% endif %} {{ "%.1f"|format(expense_change|abs) }}%
+            </span>
+        </article>
+        <article class="kpi-card">
+            <span class="card-icon savings"></span>
+            <p>Savings</p>
+            <strong>{% if total_savings < 0 %}-{% endif %}₹{{ "%.0f"|format(total_savings|abs) }}</strong>
+            <span class="{% if savings_change >= 0 %}trend-up{% else %}trend-down{% endif %}">
+                {% if savings_change >= 0 %}↑{% else %}↓{% endif %} {{ "%.1f"|format(savings_change|abs) }}%
+            </span>
+        </article>
+        <article class="kpi-card">
+            <span class="card-icon budget"></span>
+            <p>Budget Usage</p>
+            <strong>{{ "%.0f"|format(budget_usage) }}%</strong>
+            <span class="{% if budget_usage_change <= 0 %}trend-up{% else %}trend-down{% endif %}">
+                {% if budget_usage_change <= 0 %}↓{% else %}↑{% endif %} {{ "%.1f"|format(budget_usage_change|abs) }} pts
+            </span>
+        </article>
+    </div>
+</section>
+
+<section class="page-grid two-thirds">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Analytics</p>
+                <h2>Income vs Expense</h2>
+            </div>
+            <span class="panel-tag">Last 6 months</span>
+        </div>
+        {% if timeline_window %}
+        <div class="chart-panel">
+            <div class="chart-legend">
+                <span><i class="legend-line income"></i>Income</span>
+                <span><i class="legend-line expense"></i>Expense</span>
+            </div>
+            <svg viewBox="0 0 320 120" class="line-chart" aria-label="Income and expense trend">
+                <polyline points="{{ income_points }}" class="chart-line income-line"></polyline>
+                <polyline points="{{ spending_points }}" class="chart-line expense-line"></polyline>
+            </svg>
+            <div class="chart-axis">
+                {% for item in timeline_window %}
+                <span>{{ item.label }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-panel">Add completed income and expense transactions to unlock monthly trends.</div>
+        {% endif %}
+    </article>
+
+    <article class="panel insight-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Insights</p>
+                <h2>Watchlist</h2>
+            </div>
+        </div>
+        <div class="insight-list">
+            {% for insight in insights %}
+            <article class="insight-item">
+                <strong>{{ insight.title }}</strong>
+                <p>{{ insight["copy"] }}</p>
+            </article>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="page-grid split">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Budget progress</p>
+                <h2>Category budgets</h2>
+            </div>
+            <a href="/budgets" class="text-link">Open budgets</a>
+        </div>
+        <div class="budget-list">
+            {% for budget in budget_rows %}
+            <article class="budget-card">
+                <div class="budget-head">
+                    <div>
+                        <strong>{{ budget.category }}</strong>
+                        <span>₹{{ "%.0f"|format(budget.spent) }} / ₹{{ "%.0f"|format(budget.limit) }}</span>
+                    </div>
+                    <b class="status-chip {{ budget.status|lower|replace(' ', '-') }}">{{ budget.status }}</b>
+                </div>
+                <div class="progress-track">
+                    <span style="width: {{ budget.usage|round(1) }}%"></span>
+                </div>
+                <small>{{ "%.0f"|format(budget.actual_usage) }}% used</small>
+            </article>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Breakdown</p>
+                <h2>Category share</h2>
+            </div>
+        </div>
+        <div class="donut-layout">
+            <div class="donut-chart" style="--donut-segments: {{ donut_gradient }}">
+                <strong>₹{{ "%.0f"|format(total_spent) }}</strong>
+                <span>Completed expenses</span>
+            </div>
+            <div class="donut-legend">
+                {% for category, total in category_totals %}
+                <div class="legend-row">
+                    <span class="legend-dot dot-{{ loop.index }}"></span>
+                    <span>{{ category }}</span>
+                    <strong>₹{{ "%.0f"|format(total) }}</strong>
+                </div>
+                {% else %}
+                <div class="empty-panel inline-empty">No completed expense categories yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </article>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Recent activity</p>
+            <h2>Latest transactions</h2>
+        </div>
+        <a href="/transactions" class="primary-button subtle">View All Transactions</a>
+    </div>
+    <div class="table-shell">
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in recent_transactions %}
+                <tr>
+                    <td>{{ expense.description or "No description" }}</td>
+                    <td>{{ expense.category }}</td>
+                    <td><span class="type-pill {{ expense.transaction_type }}">{{ expense.transaction_type|title }}</span></td>
+                    <td>{{ expense.date_obj.strftime("%d %b %Y") }}</td>
+                    <td class="{% if expense.transaction_type == 'income' %}amount-positive{% else %}amount-negative{% endif %}">
+                        {% if expense.transaction_type == 'income' %}+{% else %}-{% endif %}₹{{ "%.2f"|format(expense.amount) }}
+                    </td>
+                    <td><span class="status-pill status-{{ expense.status }}">{{ expense.status|title }}</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="empty-row">No transactions match the current filters.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

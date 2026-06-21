@@ -29,6 +29,17 @@ def init_db():
             )
             """
         )
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(expenses)")}
+        if "transaction_type" not in columns:
+            conn.execute(
+                "ALTER TABLE expenses ADD COLUMN transaction_type TEXT NOT NULL "
+                "DEFAULT 'expense' CHECK(transaction_type IN ('expense', 'income'))"
+            )
+        if "status" not in columns:
+            conn.execute(
+                "ALTER TABLE expenses ADD COLUMN status TEXT NOT NULL "
+                "DEFAULT 'completed' CHECK(status IN ('completed', 'pending'))"
+            )
 
 
 def parse_csv_row(row):
@@ -89,14 +100,19 @@ def row_to_expense(row):
         "amount": row["amount"],
         "category": row["category"],
         "description": row["description"] or "",
+        "transaction_type": row["transaction_type"],
+        "status": row["status"],
         "date": row["created_at"],
         "created_at": row["created_at"],
         "date_obj": datetime.strptime(row["created_at"], DATE_FORMAT),
     }
 
 
-def list_expenses(category=None, month=None, year=None):
-    query = "SELECT id, amount, category, description, created_at FROM expenses"
+def list_expenses(category=None, month=None, year=None, transaction_type=None, status=None):
+    query = """
+        SELECT id, amount, category, description, transaction_type, status, created_at
+        FROM expenses
+    """
     filters = []
     params = []
 
@@ -109,6 +125,12 @@ def list_expenses(category=None, month=None, year=None):
     if year:
         filters.append("strftime('%Y', created_at) = ?")
         params.append(year)
+    if transaction_type:
+        filters.append("transaction_type = ?")
+        params.append(transaction_type)
+    if status:
+        filters.append("status = ?")
+        params.append(status)
 
     if filters:
         query += " WHERE " + " AND ".join(filters)
@@ -123,7 +145,7 @@ def get_expense(expense_id):
     with get_connection() as conn:
         row = conn.execute(
             """
-            SELECT id, amount, category, description, created_at
+            SELECT id, amount, category, description, transaction_type, status, created_at
             FROM expenses
             WHERE id = ?
             """,
@@ -132,29 +154,62 @@ def get_expense(expense_id):
     return row_to_expense(row) if row else None
 
 
-def add_expense(amount, category, description=""):
+def add_expense(
+    amount,
+    category,
+    description="",
+    transaction_type="expense",
+    status="completed",
+    created_at=None,
+):
     expense_id = str(uuid.uuid4())
-    created_at = datetime.now().strftime(DATE_FORMAT)
+    created_at = created_at or datetime.now().strftime(DATE_FORMAT)
     with get_connection() as conn:
         conn.execute(
             """
-            INSERT INTO expenses (id, amount, category, description, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO expenses
+                (id, amount, category, description, transaction_type, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (expense_id, amount, category.strip(), description.strip(), created_at),
+            (
+                expense_id,
+                amount,
+                category.strip(),
+                description.strip(),
+                transaction_type,
+                status,
+                created_at,
+            ),
         )
     return expense_id
 
 
-def update_expense(expense_id, amount, category, description=""):
+def update_expense(
+    expense_id,
+    amount,
+    category,
+    description="",
+    transaction_type="expense",
+    status="completed",
+    created_at=None,
+):
+    created_at = created_at or datetime.now().strftime(DATE_FORMAT)
     with get_connection() as conn:
         result = conn.execute(
             """
             UPDATE expenses
-            SET amount = ?, category = ?, description = ?
+            SET amount = ?, category = ?, description = ?, transaction_type = ?, status = ?, created_at = ?
             WHERE id = ?
             """,
-            (amount, category.strip(), description.strip(), expense_id),
+            (
+                amount,
+                category.strip(),
+                description.strip(),
+                transaction_type,
+                status,
+                created_at,
+                expense_id,
+            ),
         )
     return result.rowcount > 0
 

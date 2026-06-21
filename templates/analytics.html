@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Analytics | Expense Tracker{% endblock %}
+{% block content %}
+<section class="stat-strip">
+    <article class="mini-stat">
+        <span>Projected spending</span>
+        <strong>₹{{ "%.0f"|format(projected_spending) }}</strong>
+    </article>
+    <article class="mini-stat">
+        <span>Average expense</span>
+        <strong>₹{{ "%.0f"|format(average_expense) }}</strong>
+    </article>
+    <article class="mini-stat">
+        <span>Pending pipeline</span>
+        <strong>₹{{ "%.0f"|format(pending_total) }}</strong>
+    </article>
+</section>
+
+<section class="page-grid split">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Monthly spending trend</p>
+                <h2>Expense pacing</h2>
+            </div>
+        </div>
+        {% if monthly_spending %}
+        <div class="bar-chart">
+            {% for item in monthly_spending %}
+            <div class="bar-column">
+                <span class="bar-value">₹{{ "%.0f"|format(item.actual + item.projection) }}</span>
+                <div class="bar-track">
+                    <i class="actual-bar" style="height: {{ (item.actual / max_monthly_total * 100)|round(1) if max_monthly_total else 0 }}%"></i>
+                    {% if item.projection %}
+                    <i class="projection-bar" style="bottom: {{ (item.actual / max_monthly_total * 100)|round(1) if max_monthly_total else 0 }}%; height: {{ (item.projection / max_monthly_total * 100)|round(1) if max_monthly_total else 0 }}%"></i>
+                    {% endif %}
+                </div>
+                <span class="bar-label">{{ item.label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-panel">No completed expenses yet.</div>
+        {% endif %}
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Savings trend</p>
+                <h2>Net after income</h2>
+            </div>
+        </div>
+        {% if timeline_window %}
+        <svg viewBox="0 0 320 120" class="line-chart" aria-label="Savings trend">
+            <polyline points="{{ savings_points }}" class="chart-line savings-line"></polyline>
+        </svg>
+        <div class="chart-axis">
+            {% for item in timeline_window %}
+            <span>{{ item.label }}</span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-panel">Add income and expenses to calculate savings momentum.</div>
+        {% endif %}
+    </article>
+</section>
+
+<section class="page-grid split">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Top categories</p>
+                <h2>Where money goes</h2>
+            </div>
+        </div>
+        <div class="stack-list">
+            {% for category, total in category_totals %}
+            <div class="stack-row">
+                <div>
+                    <strong>{{ category }}</strong>
+                    <span>₹{{ "%.0f"|format(total) }}</span>
+                </div>
+                <div class="stack-bar"><span style="width: {{ (total / total_spent * 100)|round(1) if total_spent else 0 }}%"></span></div>
+            </div>
+            {% else %}
+            <div class="empty-panel">Category comparisons appear after you add completed expenses.</div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Cash flow overview</p>
+                <h2>Income vs expense mix</h2>
+            </div>
+        </div>
+        <div class="cashflow-list">
+            {% for item in cashflow_monthly %}
+            <div class="cashflow-row">
+                <span>{{ item.label }}</span>
+                <div class="cashflow-bars">
+                    <i class="income-bar" style="width: {{ (item.income / max_cashflow * 100)|round(1) if max_cashflow else 0 }}%"></i>
+                    <i class="expense-bar" style="width: {{ (item.expenses / max_cashflow * 100)|round(1) if max_cashflow else 0 }}%"></i>
+                </div>
+                <strong class="{% if item.net < 0 %}amount-negative{% else %}amount-positive{% endif %}">
+                    {% if item.net < 0 %}-{% else %}+{% endif %}₹{{ "%.0f"|format(item.net_abs) }}
+                </strong>
+            </div>
+            {% else %}
+            <div class="empty-panel">Cash flow appears here after completed transactions are added.</div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

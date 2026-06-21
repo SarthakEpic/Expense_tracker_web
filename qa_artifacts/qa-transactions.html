@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Transactions | Expense Tracker</title>
+    <link rel="stylesheet" href="http://127.0.0.1:8001/static/style.css">
+</head>
+<body>
+    <div class="mobile-sidebar-backdrop" data-close-sidebar></div>
+    <div class="app-frame">
+        <aside class="sidebar" data-sidebar>
+            <div class="sidebar-top">
+                <a class="brand" href="/">
+                    <span class="brand-mark"></span>
+                    <div>
+                        <strong>Expense Tracker</strong>
+                        <small>Fintech workspace</small>
+                    </div>
+                </a>
+                <button type="button" class="icon-button sidebar-close" data-close-sidebar aria-label="Close navigation">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Primary">
+                
+                <a href="/" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-dashboard"></span>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="/transactions" class="nav-link active">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-transactions"></span>
+                    <span>Transactions</span>
+                </a>
+                
+                <a href="/analytics" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-analytics"></span>
+                    <span>Analytics</span>
+                </a>
+                
+                <a href="/budgets" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-budgets"></span>
+                    <span>Budgets</span>
+                </a>
+                
+                <a href="/reports" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-reports"></span>
+                    <span>Reports</span>
+                </a>
+                
+                <a href="/settings" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-settings"></span>
+                    <span>Settings</span>
+                </a>
+                
+                <a href="/coming-soon" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-coming-soon"></span>
+                    <span>Coming Soon</span>
+                </a>
+                
+            </nav>
+
+            <div class="sidebar-card">
+                <p>Workspace status</p>
+                <strong>June 2026</strong>
+                <span>1 pending transactions waiting to clear.</span>
+            </div>
+
+            <div class="sidebar-profile">
+                <div class="avatar">A</div>
+                <div>
+                    <strong>Admin</strong>
+                    <small>admin@example.com</small>
+                </div>
+                <a href="/logout" class="logout-link">Log out</a>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <header class="topbar">
+                <div class="topbar-copy">
+                    <button type="button" class="icon-button mobile-menu" data-open-sidebar aria-label="Open navigation">
+                        <span></span>
+                    </button>
+                    <div>
+                        <p class="eyebrow">Transaction ledger</p>
+                        <h1>Transactions</h1>
+                        <p class="subtitle">Search, sort, and review every inflow and outflow from one clean table.</p>
+                    </div>
+                </div>
+                <div class="topbar-actions">
+                    <button type="button" class="secondary-button" data-open-drawer>Add Transaction</button>
+                    <a href="/export" class="primary-button">Export CSV</a>
+                </div>
+            </header>
+
+            
+
+            
+<section class="panel">
+    <form action="/transactions" method="get" class="filter-grid">
+        <label>
+            Search
+            <input type="text" name="search" value="" placeholder="Merchant, note, category">
+        </label>
+        <label>
+            Category
+            <select name="category">
+                <option value="">All categories</option>
+                
+                <option value="Bills" >Bills</option>
+                
+                <option value="Food" >Food</option>
+                
+                <option value="Salary" >Salary</option>
+                
+                <option value="Shopping" >Shopping</option>
+                
+                <option value="Travel" >Travel</option>
+                
+            </select>
+        </label>
+        <label>
+            Type
+            <select name="transaction_type">
+                <option value="">All types</option>
+                <option value="expense" >Expense</option>
+                <option value="income" >Income</option>
+            </select>
+        </label>
+        <label>
+            Status
+            <select name="status">
+                <option value="">All status</option>
+                <option value="completed" >Completed</option>
+                <option value="pending" >Pending</option>
+            </select>
+        </label>
+        <label>
+            From
+            <input type="date" name="date_from" value="">
+        </label>
+        <label>
+            To
+            <input type="date" name="date_to" value="">
+        </label>
+        <label>
+            Sort
+            <select name="sort">
+                <option value="newest" selected>Newest first</option>
+                <option value="oldest" >Oldest first</option>
+                <option value="amount_high" >Amount high to low</option>
+                <option value="amount_low" >Amount low to high</option>
+                <option value="category" >Category</option>
+            </select>
+        </label>
+        <div class="filter-actions">
+            <button type="submit" class="primary-button">Apply</button>
+            <a href="/transactions" class="secondary-button">Reset</a>
+        </div>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Ledger</p>
+            <h2>16 transactions</h2>
+        </div>
+        <button type="button" class="primary-button subtle" data-open-drawer>Add transaction</button>
+    </div>
+
+    <div class="table-shell">
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td>Amazon pantry</td>
+                    <td>Food</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>18 Jun 2026</td>
+                    <td class="amount-negative">
+                        -₹2500.00
+                    </td>
+                    <td><span class="status-pill status-pending">Pending</span></td>
+                    <td class="action-row">
+                        <a href="/edit/d01f4405-cd2c-44a2-9b98-4961e4adf0b1" class="text-link">Edit</a>
+                        <form action="/delete/d01f4405-cd2c-44a2-9b98-4961e4adf0b1" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Running shoes</td>
+                    <td>Shopping</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>15 Jun 2026</td>
+                    <td class="amount-negative">
+                        -₹4600.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                    <td class="action-row">
+                        <a href="/edit/56e103ab-c430-44ca-90a5-092c338167f3" class="text-link">Edit</a>
+                        <form action="/delete/56e103ab-c430-44ca-90a5-092c338167f3" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Mobile and internet</td>
+                    <td>Bills</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>13 Jun 2026</td>
+                    <td class="amount-negative">
+                        -₹3800.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                    <td class="action-row">
+                        <a href="/edit/c38ed5f1-40d6-467d-8d2b-e786ce6876bf" class="text-link">Edit</a>
+                        <form action="/delete/c38ed5f1-40d6-467d-8d2b-e786ce6876bf" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Weekend trip</td>
+                    <td>Travel</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>12 Jun 2026</td>
+                    <td class="amount-negative">
+                        -₹11500.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                    <td class="action-row">
+                        <a href="/edit/b7cdb3a1-cef7-4deb-a93d-9097aea641eb" class="text-link">Edit</a>
+                        <form action="/delete/b7cdb3a1-cef7-4deb-a93d-9097aea641eb" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Groceries and cafes</td>
+                    <td>Food</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>07 Jun 2026</td>
+                    <td class="amount-negative">
+                        -₹7200.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                    <td class="action-row">
+                        <a href="/edit/29a6032e-8ff8-4515-9b5f-57fa36d59349" class="text-link">Edit</a>
+                        <form action="/delete/29a6032e-8ff8-4515-9b5f-57fa36d59349" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Monthly salary</td>
+                    <td>Salary</td>
+                    <td><span class="type-pill income">Income</span></td>
+                    <td>01 Jun 2026</td>
+                    <td class="amount-positive">
+                        +₹108000.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                    <td class="action-row">
+                        <a href="/edit/9b830ab2-9e93-4427-9fbd-060ae7e607f1" class="text-link">Edit</a>
+                        <form action="/delete/9b830ab2-9e93-4427-9fbd-060ae7e607f1" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Wardrobe refresh</td>
+                    <td>Shopping</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>14 May 2026</td>
+                    <td class="amount-negative">
+                        -₹6400.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                    <td class="action-row">
+                        <a href="/edit/ad28a8ca-fae8-4ead-8e28-f5d37e14660d" class="text-link">Edit</a>
+                        <form action="/delete/ad28a8ca-fae8-4ead-8e28-f5d37e14660d" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Internet and power</td>
+                    <td>Bills</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>09 May 2026</td>
+                    <td class="amount-negative">
+                        -₹4100.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                    <td class="action-row">
+                        <a href="/edit/fb2d7e25-2ab1-4a45-832b-81837ded7f6d" class="text-link">Edit</a>
+                        <form action="/delete/fb2d7e25-2ab1-4a45-832b-81837ded7f6d" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Dining out</td>
+                    <td>Food</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>06 May 2026</td>
+                    <td class="amount-negative">
+                        -₹5200.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                    <td class="action-row">
+                        <a href="/edit/96263bb1-f7dd-4c9a-9aa2-5c8df58466d6" class="text-link">Edit</a>
+                        <form action="/delete/96263bb1-f7dd-4c9a-9aa2-5c8df58466d6" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Monthly salary</td>
+                    <td>Salary</td>
+                    <td><span class="type-pill income">Income</span></td>
+                    <td>01 May 2026</td>
+                    <td class="amount-positive">
+                        +₹102000.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                    <td class="action-row">
+                        <a href="/edit/48814634-fbb4-4764-9e34-6e88f7eb8ae9" class="text-link">Edit</a>
+                        <form action="/delete/48814634-fbb4-4764-9e34-6e88f7eb8ae9" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mobile-cards">
+        
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>Amazon pantry</strong>
+                <span class="amount-negative">
+                    -₹2500.00
+                </span>
+            </div>
+            <p>Food • 18 Jun 2026</p>
+            <div class="card-meta">
+                <span class="type-pill expense">Expense</span>
+                <span class="status-pill status-pending">Pending</span>
+            </div>
+        </article>
+        
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>Running shoes</strong>
+                <span class="amount-negative">
+                    -₹4600.00
+                </span>
+            </div>
+            <p>Shopping • 15 Jun 2026</p>
+            <div class="card-meta">
+                <span class="type-pill expense">Expense</span>
+                <span class="status-pill status-completed">Completed</span>
+            </div>
+        </article>
+        
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>Mobile and internet</strong>
+                <span class="amount-negative">
+                    -₹3800.00
+                </span>
+            </div>
+            <p>Bills • 13 Jun 2026</p>
+            <div class="card-meta">
+                <span class="type-pill expense">Expense</span>
+                <span class="status-pill status-completed">Completed</span>
+            </div>
+        </article>
+        
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>Weekend trip</strong>
+                <span class="amount-negative">
+                    -₹11500.00
+                </span>
+            </div>
+            <p>Travel • 12 Jun 2026</p>
+            <div class="card-meta">
+                <span class="type-pill expense">Expense</span>
+                <span class="status-pill status-completed">Completed</span>
+            </div>
+        </article>
+        
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>Groceries and cafes</strong>
+                <span class="amount-negative">
+                    -₹7200.00
+                </span>
+            </div>
+            <p>Food • 07 Jun 2026</p>
+            <div class="card-meta">
+                <span class="type-pill expense">Expense</span>
+                <span class="status-pill status-completed">Completed</span>
+            </div>
+        </article>
+        
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>Monthly salary</strong>
+                <span class="amount-positive">
+                    +₹108000.00
+                </span>
+            </div>
+            <p>Salary • 01 Jun 2026</p>
+            <div class="card-meta">
+                <span class="type-pill income">Income</span>
+                <span class="status-pill status-completed">Completed</span>
+            </div>
+        </article>
+        
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>Wardrobe refresh</strong>
+                <span class="amount-negative">
+                    -₹6400.00
+                </span>
+            </div>
+            <p>Shopping • 14 May 2026</p>
+            <div class="card-meta">
+                <span class="type-pill expense">Expense</span>
+                <span class="status-pill status-completed">Completed</span>
+            </div>
+        </article>
+        
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>Internet and power</strong>
+                <span class="amount-negative">
+                    -₹4100.00
+                </span>
+            </div>
+            <p>Bills • 09 May 2026</p>
+            <div class="card-meta">
+                <span class="type-pill expense">Expense</span>
+                <span class="status-pill status-completed">Completed</span>
+            </div>
+        </article>
+        
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>Dining out</strong>
+                <span class="amount-negative">
+                    -₹5200.00
+                </span>
+            </div>
+            <p>Food • 06 May 2026</p>
+            <div class="card-meta">
+                <span class="type-pill expense">Expense</span>
+                <span class="status-pill status-completed">Completed</span>
+            </div>
+        </article>
+        
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>Monthly salary</strong>
+                <span class="amount-positive">
+                    +₹102000.00
+                </span>
+            </div>
+            <p>Salary • 01 May 2026</p>
+            <div class="card-meta">
+                <span class="type-pill income">Income</span>
+                <span class="status-pill status-completed">Completed</span>
+            </div>
+        </article>
+        
+    </div>
+
+    <div class="pagination">
+        <a href="/transactions?search=&category=&transaction_type=&status=&date_from=&date_to=&sort=newest&page=1" class="secondary-button">Previous</a>
+        <span>Page 1 of 2</span>
+        <a href="/transactions?search=&category=&transaction_type=&status=&date_from=&date_to=&sort=newest&page=2" class="secondary-button">Next</a>
+    </div>
+</section>
+
+        </div>
+    </div>
+
+    <div class="drawer-backdrop" data-close-drawer></div>
+    <aside class="drawer" data-drawer>
+        <div class="drawer-header">
+            <div>
+                <p class="eyebrow">Quick action</p>
+                <h2>Add transaction</h2>
+            </div>
+            <button type="button" class="icon-button" data-close-drawer aria-label="Close add transaction panel">
+                <span></span>
+            </button>
+        </div>
+        <p class="drawer-copy">Capture expenses or income without leaving the page.</p>
+
+        <form action="/add" method="post" class="drawer-form">
+            <input type="hidden" name="csrf_token" value="FjR_fMJqesQ30Fls027-NnQQGAE7e2u1XGJzOCkgUFg">
+
+            <label>
+                Type
+                <select name="transaction_type">
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
+                </select>
+            </label>
+
+            <label>
+                Amount
+                <input type="number" name="amount" step="0.01" min="0.01" placeholder="0.00" required>
+            </label>
+
+            <label>
+                Category
+                <input list="category-options" name="category" placeholder="Food, Salary, Travel" required>
+            </label>
+
+            <label>
+                Date
+                <input type="datetime-local" name="transaction_date" value="2026-06-21T06:56" required>
+            </label>
+
+            <label class="drawer-span">
+                Description
+                <input type="text" name="description" placeholder="Merchant or note">
+            </label>
+
+            <label>
+                Status
+                <select name="status">
+                    <option value="completed">Completed</option>
+                    <option value="pending">Pending</option>
+                </select>
+            </label>
+
+            <datalist id="category-options">
+                
+                <option value="Bills"></option>
+                
+                <option value="Food"></option>
+                
+                <option value="Salary"></option>
+                
+                <option value="Shopping"></option>
+                
+                <option value="Travel"></option>
+                
+            </datalist>
+
+            <div class="drawer-actions">
+                <button type="button" class="secondary-button" data-close-drawer>Cancel</button>
+                <button type="submit" class="primary-button">Save Transaction</button>
+            </div>
+        </form>
+    </aside>
+
+    <script src="http://127.0.0.1:8001/static/app.js"></script>
+</body>
+</html>

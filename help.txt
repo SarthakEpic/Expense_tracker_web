@@ -1,0 +1,106 @@
+Expense Tracker Web - Helpful Commands
+======================================
+
+Run these commands from the project folder:
+
+E:\Languages\Projects\Expense_tracker_web
+
+
+1. Create virtual environment
+-----------------------------
+
+python -m venv venv
+
+
+2. Activate virtual environment
+-------------------------------
+
+venv\Scripts\activate
+
+
+3. Install dependencies
+-----------------------
+
+pip install -r requirement.txt
+
+
+4. Create or update login username/password
+-------------------------------------------
+
+python create_user.py
+
+Comment:
+This creates a local .env file with your username, hashed password, and secret key.
+Do not commit .env to GitHub.
+
+
+5. Run the app
+--------------
+
+uvicorn main:app --reload
+
+Open this in browser:
+
+http://127.0.0.1:8000
+
+
+6. Run tests
+------------
+
+python -m pytest
+
+
+7. Check Git status
+-------------------
+
+git status
+
+
+8. See recent commits
+---------------------
+
+git log --oneline -5
+
+
+9. Add all changed files
+------------------------
+
+git add .
+
+
+10. Commit changes
+------------------
+
+git commit -m "your commit message here"
+
+Example:
+
+git commit -m "docs: add helpful project commands"
+
+
+11. Push to GitHub
+------------------
+
+git push
+
+
+12. If push asks for branch upstream
+------------------------------------
+
+git push -u origin main
+
+
+13. Stop the running app
+------------------------
+
+Press Ctrl + C in the terminal where uvicorn is running.
+
+
+Important notes
+---------------
+
+- Keep .env private.
+- Keep expenses.db private unless you intentionally want to share your data.
+- If dependencies are missing, run: pip install -r requirement.txt
+- If login is not working, run: python create_user.py
+- If tests fail after changing code, fix tests or app logic before committing.

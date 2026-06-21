@@ -1,33 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login</title>
+    <title>Login | Expense Tracker</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
-    <div class="container">
-        <h1>Login</h1>
-        <form action="/login" method="post" class="card">
+<body class="auth-surface">
+    <main class="auth-page">
+        <form action="/login" method="post" class="auth-card premium-card">
+            <p class="eyebrow">Expense Tracker</p>
+            <h1>Welcome back</h1>
+            <p class="subtitle">Sign in to your financial workspace.</p>
+
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-            <label>
-                Username
-                <input type="text" name="username" required>
-            </label>
+            {% if error %}
+            <p class="error">{{ error }}</p>
+            {% endif %}
 
-            <label>
-                Password
-                <input type="password" name="password" required>
-            </label>
+            <div class="auth-grid">
+                <label class="auth-span">
+                    Username
+                    <input type="text" name="username" required autofocus>
+                </label>
 
-            <button type="submit">Login</button>
+                <label class="auth-span">
+                    Password
+                    <input type="password" name="password" required>
+                </label>
+            </div>
+
+            <div class="drawer-actions">
+                <button type="submit" class="primary-button">Login</button>
+            </div>
         </form>
-
-        {% if error %}
-        <p class="error">{{ error }}</p>
-        {% endif %}
-    </div>
+    </main>
 </body>
 </html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Expense Tracker{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="mobile-sidebar-backdrop" data-close-sidebar></div>
+    <div class="app-frame">
+        <aside class="sidebar" data-sidebar>
+            <div class="sidebar-top">
+                <a class="brand" href="/">
+                    <span class="brand-mark"></span>
+                    <div>
+                        <strong>Expense Tracker</strong>
+                        <small>Fintech workspace</small>
+                    </div>
+                </a>
+                <button type="button" class="icon-button sidebar-close" data-close-sidebar aria-label="Close navigation">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Primary">
+                {% for item in nav_items %}
+                <a href="{{ item.href }}" class="nav-link {% if item.active %}active{% endif %}">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-{{ item.key }}"></span>
+                    <span>{{ item.label }}</span>
+                </a>
+                {% endfor %}
+            </nav>
+
+            <div class="sidebar-card">
+                <p>Workspace status</p>
+                <strong>{{ current_period_label }}</strong>
+                <span>{{ pending_count }} pending transactions waiting to clear.</span>
+            </div>
+
+            <div class="sidebar-profile">
+                <div class="avatar">{{ user_initial }}</div>
+                <div>
+                    <strong>Admin</strong>
+                    <small>{{ user_email }}</small>
+                </div>
+                <a href="/logout" class="logout-link">Log out</a>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <header class="topbar">
+                <div class="topbar-copy">
+                    <button type="button" class="icon-button mobile-menu" data-open-sidebar aria-label="Open navigation">
+                        <span></span>
+                    </button>
+                    <div>
+                        <p class="eyebrow">{{ page_meta.eyebrow }}</p>
+                        <h1>{{ page_meta.title }}</h1>
+                        <p class="subtitle">{{ page_meta.subtitle }}</p>
+                    </div>
+                </div>
+                <div class="topbar-actions">
+                    <button type="button" class="secondary-button" data-open-drawer>Add Transaction</button>
+                    <a href="/export" class="primary-button">Export CSV</a>
+                </div>
+            </header>
+
+            {% if message %}
+            <div class="flash-message">{{ message }}</div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <div class="drawer-backdrop" data-close-drawer></div>
+    <aside class="drawer" data-drawer>
+        <div class="drawer-header">
+            <div>
+                <p class="eyebrow">Quick action</p>
+                <h2>Add transaction</h2>
+            </div>
+            <button type="button" class="icon-button" data-close-drawer aria-label="Close add transaction panel">
+                <span></span>
+            </button>
+        </div>
+        <p class="drawer-copy">Capture expenses or income without leaving the page.</p>
+
+        <form action="/add" method="post" class="drawer-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <label>
+                Type
+                <select name="transaction_type">
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
+                </select>
+            </label>
+
+            <label>
+                Amount
+                <input type="number" name="amount" step="0.01" min="0.01" placeholder="0.00" required>
+            </label>
+
+            <label>
+                Category
+                <input list="category-options" name="category" placeholder="Food, Salary, Travel" required>
+            </label>
+
+            <label>
+                Date
+                <input type="datetime-local" name="transaction_date" value="{{ default_transaction_date }}" required>
+            </label>
+
+            <label class="drawer-span">
+                Description
+                <input type="text" name="description" placeholder="Merchant or note">
+            </label>
+
+            <label>
+                Status
+                <select name="status">
+                    <option value="completed">Completed</option>
+                    <option value="pending">Pending</option>
+                </select>
+            </label>
+
+            <datalist id="category-options">
+                {% for category in categories %}
+                <option value="{{ category }}"></option>
+                {% endfor %}
+            </datalist>
+
+            <div class="drawer-actions">
+                <button type="button" class="secondary-button" data-close-drawer>Cancel</button>
+                <button type="submit" class="primary-button">Save Transaction</button>
+            </div>
+        </form>
+    </aside>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

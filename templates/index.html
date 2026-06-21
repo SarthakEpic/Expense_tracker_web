@@ -7,180 +7,263 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <main class="container">
-        <header class="page-header">
-            <div>
-                <h1>Expense Tracker</h1>
-                <p class="page-subtitle">Track spending, scan totals, and export clean records.</p>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <a class="brand" href="/">
+                <span class="brand-mark"></span>
+                <span>Expense Tracker</span>
+            </a>
+
+            <nav class="side-nav" aria-label="Main menu">
+                <p>Main Menu</p>
+                <a class="active" href="#"><span></span>Dashboard</a>
+                <a href="#transactions"><span></span>Transactions</a>
+                <a href="#breakdown"><span></span>Breakdown</a>
+                <a href="#add-transaction"><span></span>Add Transaction</a>
+                <a href="/logout"><span></span>Logout</a>
+            </nav>
+
+            <nav class="side-nav templates-nav" aria-label="Expense tools">
+                <p>Tools</p>
+                <a href="#reports"><span></span>Monthly spending</a>
+                <a href="/export?category={{ selected_category }}&month={{ selected_month }}&year={{ selected_year }}&transaction_type={{ selected_type }}&status={{ selected_status }}"><span></span>Export CSV</a>
+            </nav>
+
+            <div class="sidebar-profile">
+                <div class="avatar">{{ user_initial }}</div>
+                <div>
+                    <strong>{{ user_name }}</strong>
+                    <small>Signed in</small>
+                </div>
             </div>
-            <a href="/logout" class="logout-btn">Logout</a>
-        </header>
+        </aside>
 
-        {% if message %}
-        <p class="success">{{ message }}</p>
-        {% endif %}
+        <main class="dashboard">
+            <header class="dashboard-header">
+                <div>
+                    <h1>Welcome, {{ user_name }}</h1>
+                    <p class="page-subtitle">Your income, spending, and cashflow for the selected period.</p>
+                </div>
 
-        <section class="summary-grid" aria-label="Summary">
-            <article class="summary-tile">
-                <span>Total Spent</span>
-                <strong>₹{{ "%.2f"|format(total_spent) }}</strong>
-            </article>
-            <article class="summary-tile">
-                <span>Visible Expenses</span>
-                <strong>{{ expenses|length }}</strong>
-            </article>
-            <article class="summary-tile">
-                <span>Categories</span>
-                <strong>{{ categories|length }}</strong>
-            </article>
-        </section>
-
-        <section class="card">
-            <h2>Add Expense</h2>
-            <form action="/add" method="post" class="form-grid">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-
-                <label>
-                    Amount (₹)
-                    <input type="number" name="amount" step="0.01" min="0.01" required>
-                </label>
-
-                <label>
-                    Category
-                    <input list="category-options" name="category" placeholder="Food, Travel, Bills" required>
-                </label>
-
-                <label class="wide-field">
-                    Description
-                    <input type="text" name="description" placeholder="Optional note">
-                </label>
-
-                <button type="submit">Add Expense</button>
-            </form>
-
-            <datalist id="category-options">
-                {% for category in categories %}
-                <option value="{{ category }}"></option>
-                {% endfor %}
-            </datalist>
-        </section>
-
-        <section class="card">
-            <div class="section-header">
-                <h2>Expenses</h2>
-                <a class="secondary-btn" href="/export?category={{ selected_category }}&month={{ selected_month }}&year={{ selected_year }}">Export CSV</a>
-            </div>
-
-            <form action="/" method="get" class="filters">
-                <label>
-                    Category
-                    <select name="category">
-                        <option value="">All categories</option>
+                <form action="/" method="get" class="top-controls">
+                    <select name="category" aria-label="Category">
+                        <option value="">All Categories</option>
                         {% for category in categories %}
                         <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ category }}</option>
                         {% endfor %}
                     </select>
-                </label>
-
-                <label>
-                    Month
-                    <select name="month">
+                    <select name="month" aria-label="Month">
                         <option value="">All months</option>
                         {% for month in months %}
                         <option value="{{ month }}" {% if selected_month == month %}selected{% endif %}>{{ month }}</option>
                         {% endfor %}
                     </select>
-                </label>
-
-                <label>
-                    Year
-                    <select name="year">
+                    <select name="year" aria-label="Year">
                         <option value="">All years</option>
                         {% for year in years %}
                         <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
                         {% endfor %}
                     </select>
-                </label>
+                    <select name="transaction_type" aria-label="Transaction type">
+                        <option value="">All types</option>
+                        <option value="expense" {% if selected_type == "expense" %}selected{% endif %}>Expenses</option>
+                        <option value="income" {% if selected_type == "income" %}selected{% endif %}>Income</option>
+                    </select>
+                    <select name="status" aria-label="Status">
+                        <option value="">All statuses</option>
+                        <option value="completed" {% if selected_status == "completed" %}selected{% endif %}>Completed</option>
+                        <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>Pending</option>
+                    </select>
+                    <button type="submit">Apply</button>
+                    {% if selected_category or selected_month or selected_year or selected_type or selected_status %}
+                    <a href="/" class="secondary-btn">Reset</a>
+                    {% endif %}
+                </form>
+            </header>
 
-                <button type="submit">Apply</button>
-                <a href="/" class="secondary-btn">Reset</a>
-            </form>
+            {% if message %}
+            <p class="success">{{ message }}</p>
+            {% endif %}
 
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Amount</th>
-                            <th>Category</th>
-                            <th>Description</th>
-                            <th>Date</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for expense in expenses %}
-                        <tr>
-                            <td>₹{{ "%.2f"|format(expense.amount) }}</td>
-                            <td>{{ expense.category }}</td>
-                            <td>{{ expense.description }}</td>
-                            <td>{{ expense.date }}</td>
-                            <td class="table-actions">
-                                <a href="/edit/{{ expense.id }}">Edit</a>
-                                <form action="/delete/{{ expense.id }}" method="post" onsubmit="return confirm('Delete this expense?');">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                                    <button type="submit" class="link-button danger">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="empty-state">No expenses match these filters.</td>
-                        </tr>
+            <section class="hero-grid">
+                <article class="panel revenue-panel">
+                    <div class="panel-heading">
+                        <h2>Monthly Spending</h2>
+                        <div class="legend">
+                            <span class="legend-current"></span> Actual
+                            <span class="legend-projection"></span> Projected
+                        </div>
+                    </div>
+                    {% if monthly_spending %}
+                    <div class="bar-chart" aria-label="Monthly spending chart">
+                        {% for item in monthly_spending %}
+                        <div class="bar-column">
+                            <span class="bar-value">₹{{ "%.0f"|format(item.actual + item.projection) }}</span>
+                            <div class="bar-track">
+                                <i class="actual-bar" style="height: {{ (item.actual / max_monthly_total * 100)|round(1) }}%"></i>
+                                {% if item.projection %}
+                                <i class="projection-bar" style="bottom: {{ (item.actual / max_monthly_total * 100)|round(1) }}%; height: {{ (item.projection / max_monthly_total * 100)|round(1) }}%"></i>
+                                {% endif %}
+                            </div>
+                            <span class="bar-label">{{ item.period }}</span>
+                        </div>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="report-grid">
-            <article class="card">
-                <h2>Monthly Totals</h2>
-                <ul class="report-list">
-                    {% for month, total in monthly_totals %}
-                    <li><span>{{ month }}</span><strong>₹{{ "%.2f"|format(total) }}</strong></li>
+                    </div>
                     {% else %}
-                    <li><span>No monthly totals yet.</span></li>
-                    {% endfor %}
-                </ul>
-            </article>
+                    <div class="chart-empty">Add a completed expense to see monthly spending.</div>
+                    {% endif %}
+                </article>
 
-            <article class="card">
-                <h2>Yearly Totals</h2>
-                <ul class="report-list">
-                    {% for year, total in yearly_totals %}
-                    <li><span>{{ year }}</span><strong>₹{{ "%.2f"|format(total) }}</strong></li>
-                    {% else %}
-                    <li><span>No yearly totals yet.</span></li>
-                    {% endfor %}
-                </ul>
-            </article>
+                <div class="metric-stack">
+                    <article class="metric-card blue">
+                        <div>
+                            <strong>₹{{ "%.2f"|format(total_spent) }}</strong>
+                            <span>Total Spent</span>
+                        </div>
+                        <span class="metric-icon pie-icon"></span>
+                    </article>
+                    <article class="metric-card purple">
+                        <div>
+                            <strong>₹{{ "%.2f"|format(total_income) }}</strong>
+                            <span>Total Income</span>
+                        </div>
+                        <span class="metric-icon hand-icon"></span>
+                    </article>
+                    <article class="metric-card green">
+                        <div>
+                            <strong class="{% if balance < 0 %}amount-negative{% else %}amount-positive{% endif %}">{% if balance < 0 %}-{% else %}+{% endif %}₹{{ "%.2f"|format(balance_abs) }}</strong>
+                            <span>Net Balance</span>
+                        </div>
+                        <span class="metric-icon balance-icon"></span>
+                    </article>
+                    <article class="metric-card amber">
+                        <div>
+                            <strong>₹{{ "%.2f"|format(pending_total) }}</strong>
+                            <span>{{ pending_count }} Pending</span>
+                        </div>
+                        <span class="metric-icon pending-icon"></span>
+                    </article>
+                </div>
+            </section>
 
-            <article class="card">
-                <h2>Category Totals</h2>
-                <ul class="report-list">
-                    {% for category, total in category_totals %}
-                    <li><span>{{ category }}</span><strong>₹{{ "%.2f"|format(total) }}</strong></li>
-                    {% else %}
-                    <li><span>No category totals yet.</span></li>
-                    {% endfor %}
-                </ul>
-            </article>
-        </section>
+            <section class="middle-grid" id="reports">
+                <article class="panel cashflow-panel">
+                    <div class="panel-heading">
+                        <h2>Cashflow</h2>
+                        <div class="legend cashflow-legend">
+                            <span class="legend-income"></span> Income
+                            <span class="legend-current"></span> Expenses
+                        </div>
+                    </div>
+                    <ul class="cashflow-list">
+                        {% for item in cashflow_monthly %}
+                        <li>
+                            <span>{{ item.period }}</span>
+                            <div class="cashflow-bars">
+                                <i class="income-bar" style="width: {{ (item.income / max_cashflow * 100)|round(1) }}%"></i>
+                                <i class="expense-bar" style="width: {{ (item.expenses / max_cashflow * 100)|round(1) }}%"></i>
+                            </div>
+                            <strong class="{% if item.net < 0 %}amount-negative{% else %}amount-positive{% endif %}">{% if item.net < 0 %}-{% else %}+{% endif %}₹{{ "%.2f"|format(item.net_abs) }}</strong>
+                        </li>
+                        {% else %}
+                        <li class="empty-row">No completed cashflow yet.</li>
+                        {% endfor %}
+                    </ul>
+                </article>
 
-        <section class="card">
-            <h2>Monthly Spending Chart</h2>
-            <img src="{{ chart_url }}" alt="Monthly spending chart" class="chart-image">
-        </section>
-    </main>
+                <article class="panel expenses-donut" id="breakdown">
+                    <h2>Category Breakdown</h2>
+                    <div class="donut-wrap">
+                        <div class="donut-chart" style="--donut-segments: {{ donut_gradient }}">
+                            <strong>₹{{ "%.0f"|format(total_spent) }}</strong>
+                            <span>Completed expenses</span>
+                        </div>
+                        <ul class="donut-legend">
+                            {% for category, total in category_totals %}
+                            <li><span class="dot dot-{{ loop.index }}"></span>{{ category }} <strong>₹{{ "%.1f"|format(total) }}</strong></li>
+                            {% else %}
+                            <li class="legend-empty">No category data yet</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </article>
+            </section>
+
+            <section class="panel add-panel" id="add-transaction">
+                <div class="panel-heading">
+                    <h2>Add Transaction</h2>
+                    <a class="secondary-btn" href="/export?category={{ selected_category }}&month={{ selected_month }}&year={{ selected_year }}&transaction_type={{ selected_type }}&status={{ selected_status }}">Export CSV</a>
+                </div>
+
+                <form action="/add" method="post" class="quick-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <select name="transaction_type" aria-label="Transaction type">
+                        <option value="expense">Expense</option>
+                        <option value="income">Income</option>
+                    </select>
+                    <input type="number" name="amount" step="0.01" min="0.01" placeholder="Amount" required>
+                    <input list="category-options" name="category" placeholder="Category" required>
+                    <input type="text" name="description" placeholder="Description">
+                    <select name="status" aria-label="Status">
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                    <button type="submit">Add</button>
+                </form>
+
+                <datalist id="category-options">
+                    {% for category in categories %}
+                    <option value="{{ category }}"></option>
+                    {% endfor %}
+                </datalist>
+            </section>
+
+            <section class="panel transactions-panel" id="transactions">
+                <div class="panel-heading">
+                    <h2>Transactions</h2>
+                    <span class="panel-note">{{ expenses|length }} visible transaction{% if expenses|length != 1 %}s{% endif %}</span>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th>Category</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in expenses %}
+                            <tr>
+                                <td>{{ expense.description or "No description" }}</td>
+                                <td><span class="type-label type-{{ expense.transaction_type }}">{{ expense.transaction_type|title }}</span></td>
+                                <td>{{ expense.category }}</td>
+                                <td>{{ expense.date_obj.strftime("%d %b %Y") }}</td>
+                                <td class="{% if expense.transaction_type == 'income' %}amount-positive{% else %}amount-negative{% endif %}">{% if expense.transaction_type == 'income' %}+{% else %}-{% endif %}₹{{ "%.2f"|format(expense.amount) }}</td>
+                                <td><span class="status-pill status-{{ expense.status }}">{{ expense.status|title }}</span></td>
+                                <td class="table-actions">
+                                    <a href="/edit/{{ expense.id }}" class="edit-link">Edit</a>
+                                    <form action="/delete/{{ expense.id }}" method="post" onsubmit="return confirm('Delete this expense?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="link-button danger">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="empty-state">No transactions match these filters.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
 </body>
 </html>

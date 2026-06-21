@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Transactions | Expense Tracker{% endblock %}
+{% block content %}
+<section class="panel">
+    <form action="/transactions" method="get" class="filter-grid">
+        <label>
+            Search
+            <input type="text" name="search" value="{{ search }}" placeholder="Merchant, note, category">
+        </label>
+        <label>
+            Category
+            <select name="category">
+                <option value="">All categories</option>
+                {% for category in categories %}
+                <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ category }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Type
+            <select name="transaction_type">
+                <option value="">All types</option>
+                <option value="expense" {% if selected_type == "expense" %}selected{% endif %}>Expense</option>
+                <option value="income" {% if selected_type == "income" %}selected{% endif %}>Income</option>
+            </select>
+        </label>
+        <label>
+            Status
+            <select name="status">
+                <option value="">All status</option>
+                <option value="completed" {% if selected_status == "completed" %}selected{% endif %}>Completed</option>
+                <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>Pending</option>
+            </select>
+        </label>
+        <label>
+            From
+            <input type="date" name="date_from" value="{{ selected_date_from }}">
+        </label>
+        <label>
+            To
+            <input type="date" name="date_to" value="{{ selected_date_to }}">
+        </label>
+        <label>
+            Sort
+            <select name="sort">
+                <option value="newest" {% if selected_sort == "newest" %}selected{% endif %}>Newest first</option>
+                <option value="oldest" {% if selected_sort == "oldest" %}selected{% endif %}>Oldest first</option>
+                <option value="amount_high" {% if selected_sort == "amount_high" %}selected{% endif %}>Amount high to low</option>
+                <option value="amount_low" {% if selected_sort == "amount_low" %}selected{% endif %}>Amount low to high</option>
+                <option value="category" {% if selected_sort == "category" %}selected{% endif %}>Category</option>
+            </select>
+        </label>
+        <div class="filter-actions">
+            <button type="submit" class="primary-button">Apply</button>
+            <a href="/transactions" class="secondary-button">Reset</a>
+        </div>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Ledger</p>
+            <h2>{{ total_transactions }} transactions</h2>
+        </div>
+        <button type="button" class="primary-button subtle" data-open-drawer>Add transaction</button>
+    </div>
+
+    <div class="table-shell">
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.description or "No description" }}</td>
+                    <td>{{ expense.category }}</td>
+                    <td><span class="type-pill {{ expense.transaction_type }}">{{ expense.transaction_type|title }}</span></td>
+                    <td>{{ expense.date_obj.strftime("%d %b %Y") }}</td>
+                    <td class="{% if expense.transaction_type == 'income' %}amount-positive{% else %}amount-negative{% endif %}">
+                        {% if expense.transaction_type == 'income' %}+{% else %}-{% endif %}₹{{ "%.2f"|format(expense.amount) }}
+                    </td>
+                    <td><span class="status-pill status-{{ expense.status }}">{{ expense.status|title }}</span></td>
+                    <td class="action-row">
+                        <a href="/edit/{{ expense.id }}" class="text-link">Edit</a>
+                        <form action="/delete/{{ expense.id }}" method="post" onsubmit="return confirm('Delete this transaction?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="link-button danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="empty-row">No transactions match your current search and filters.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mobile-cards">
+        {% for expense in expenses %}
+        <article class="transaction-card">
+            <div class="transaction-head">
+                <strong>{{ expense.description or "No description" }}</strong>
+                <span class="{% if expense.transaction_type == 'income' %}amount-positive{% else %}amount-negative{% endif %}">
+                    {% if expense.transaction_type == 'income' %}+{% else %}-{% endif %}₹{{ "%.2f"|format(expense.amount) }}
+                </span>
+            </div>
+            <p>{{ expense.category }} • {{ expense.date_obj.strftime("%d %b %Y") }}</p>
+            <div class="card-meta">
+                <span class="type-pill {{ expense.transaction_type }}">{{ expense.transaction_type|title }}</span>
+                <span class="status-pill status-{{ expense.status }}">{{ expense.status|title }}</span>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <div class="pagination">
+        <a href="/transactions?search={{ search }}&category={{ selected_category }}&transaction_type={{ selected_type }}&status={{ selected_status }}&date_from={{ selected_date_from }}&date_to={{ selected_date_to }}&sort={{ selected_sort }}&page={{ 1 if page_number <= 1 else page_number - 1 }}" class="secondary-button">Previous</a>
+        <span>Page {{ page_number }} of {{ page_count }}</span>
+        <a href="/transactions?search={{ search }}&category={{ selected_category }}&transaction_type={{ selected_type }}&status={{ selected_status }}&date_from={{ selected_date_from }}&date_to={{ selected_date_to }}&sort={{ selected_sort }}&page={{ page_count if page_number >= page_count else page_number + 1 }}" class="secondary-button">Next</a>
+    </div>
+</section>
+{% endblock %}

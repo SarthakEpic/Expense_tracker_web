@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard | Expense Tracker</title>
+    <link rel="stylesheet" href="http://127.0.0.1:8001/static/style.css">
+</head>
+<body>
+    <div class="mobile-sidebar-backdrop" data-close-sidebar></div>
+    <div class="app-frame">
+        <aside class="sidebar" data-sidebar>
+            <div class="sidebar-top">
+                <a class="brand" href="/">
+                    <span class="brand-mark"></span>
+                    <div>
+                        <strong>Expense Tracker</strong>
+                        <small>Fintech workspace</small>
+                    </div>
+                </a>
+                <button type="button" class="icon-button sidebar-close" data-close-sidebar aria-label="Close navigation">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Primary">
+                
+                <a href="/" class="nav-link active">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-dashboard"></span>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="/transactions" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-transactions"></span>
+                    <span>Transactions</span>
+                </a>
+                
+                <a href="/analytics" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-analytics"></span>
+                    <span>Analytics</span>
+                </a>
+                
+                <a href="/budgets" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-budgets"></span>
+                    <span>Budgets</span>
+                </a>
+                
+                <a href="/reports" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-reports"></span>
+                    <span>Reports</span>
+                </a>
+                
+                <a href="/settings" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-settings"></span>
+                    <span>Settings</span>
+                </a>
+                
+                <a href="/coming-soon" class="nav-link ">
+                    <span class="nav-indicator"></span>
+                    <span class="nav-icon nav-coming-soon"></span>
+                    <span>Coming Soon</span>
+                </a>
+                
+            </nav>
+
+            <div class="sidebar-card">
+                <p>Workspace status</p>
+                <strong>June 2026</strong>
+                <span>1 pending transactions waiting to clear.</span>
+            </div>
+
+            <div class="sidebar-profile">
+                <div class="avatar">A</div>
+                <div>
+                    <strong>Admin</strong>
+                    <small>admin@example.com</small>
+                </div>
+                <a href="/logout" class="logout-link">Log out</a>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <header class="topbar">
+                <div class="topbar-copy">
+                    <button type="button" class="icon-button mobile-menu" data-open-sidebar aria-label="Open navigation">
+                        <span></span>
+                    </button>
+                    <div>
+                        <p class="eyebrow">Financial overview</p>
+                        <h1>Good Evening</h1>
+                        <p class="subtitle">Welcome back Admin. Here is your financial overview.</p>
+                    </div>
+                </div>
+                <div class="topbar-actions">
+                    <button type="button" class="secondary-button" data-open-drawer>Add Transaction</button>
+                    <a href="/export" class="primary-button">Export CSV</a>
+                </div>
+            </header>
+
+            
+
+            
+<section class="dashboard-grid">
+    <article class="hero-card">
+        <div class="hero-copy">
+            <p>Current Balance</p>
+            <strong>₹247800</strong>
+            <span class="trend-up">
+                ↑ 5.9% from last month
+            </span>
+        </div>
+        <div class="hero-mini">
+            <div>
+                <span>Pending</span>
+                <strong>₹2500</strong>
+            </div>
+            <div>
+                <span>Average expense</span>
+                <strong>₹6291</strong>
+            </div>
+        </div>
+    </article>
+
+    <div class="kpi-grid">
+        <article class="kpi-card">
+            <span class="card-icon income"></span>
+            <p>Income</p>
+            <strong>₹317000</strong>
+            <span class="trend-up">
+                ↑ 5.9%
+            </span>
+        </article>
+        <article class="kpi-card">
+            <span class="card-icon expense"></span>
+            <p>Expenses</p>
+            <strong>₹69200</strong>
+            <span class="trend-down">
+                ↑ 72.6%
+            </span>
+        </article>
+        <article class="kpi-card">
+            <span class="card-icon savings"></span>
+            <p>Savings</p>
+            <strong>₹247800</strong>
+            <span class="trend-down">
+                ↓ 6.3%
+            </span>
+        </article>
+        <article class="kpi-card">
+            <span class="card-icon budget"></span>
+            <p>Budget Usage</p>
+            <strong>50%</strong>
+            <span class="trend-down">
+                ↑ 21.1 pts
+            </span>
+        </article>
+    </div>
+</section>
+
+<section class="page-grid two-thirds">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Analytics</p>
+                <h2>Income vs Expense</h2>
+            </div>
+            <span class="panel-tag">Last 6 months</span>
+        </div>
+        
+        <div class="chart-panel">
+            <div class="chart-legend">
+                <span><i class="legend-line income"></i>Income</span>
+                <span><i class="legend-line expense"></i>Expense</span>
+            </div>
+            <svg viewBox="0 0 320 120" class="line-chart" aria-label="Income and expense trend">
+                <polyline points="14.0,25.1 87.0,95.8 160.0,106.0 233.0,19.1 306.0,14.0" class="chart-line income-line"></polyline>
+                <polyline points="14.0,106.0 87.0,68.7 160.0,53.7 233.0,52.7 306.0,14.0" class="chart-line expense-line"></polyline>
+            </svg>
+            <div class="chart-axis">
+                
+                <span>Feb</span>
+                
+                <span>Mar</span>
+                
+                <span>Apr</span>
+                
+                <span>May</span>
+                
+                <span>Jun</span>
+                
+            </div>
+        </div>
+        
+    </article>
+
+    <article class="panel insight-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Insights</p>
+                <h2>Watchlist</h2>
+            </div>
+        </div>
+        <div class="insight-list">
+            
+            <article class="insight-item">
+                <strong>Top category</strong>
+                <p>Travel leads your completed spending at INR 21300.</p>
+            </article>
+            
+            <article class="insight-item">
+                <strong>Largest expense</strong>
+                <p>Weekend trip for INR 11500.</p>
+            </article>
+            
+            <article class="insight-item">
+                <strong>Budget watch</strong>
+                <p>Travel is at 128% of its monthly limit.</p>
+            </article>
+            
+        </div>
+    </article>
+</section>
+
+<section class="page-grid split">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Budget progress</p>
+                <h2>Category budgets</h2>
+            </div>
+            <a href="/budgets" class="text-link">Open budgets</a>
+        </div>
+        <div class="budget-list">
+            
+            <article class="budget-card">
+                <div class="budget-head">
+                    <div>
+                        <strong>Food</strong>
+                        <span>₹7200 / ₹12000</span>
+                    </div>
+                    <b class="status-chip safe">Safe</b>
+                </div>
+                <div class="progress-track">
+                    <span style="width: 60.0%"></span>
+                </div>
+                <small>60% used</small>
+            </article>
+            
+            <article class="budget-card">
+                <div class="budget-head">
+                    <div>
+                        <strong>Travel</strong>
+                        <span>₹11500 / ₹9000</span>
+                    </div>
+                    <b class="status-chip over-budget">Over Budget</b>
+                </div>
+                <div class="progress-track">
+                    <span style="width: 100%"></span>
+                </div>
+                <small>128% used</small>
+            </article>
+            
+            <article class="budget-card">
+                <div class="budget-head">
+                    <div>
+                        <strong>Shopping</strong>
+                        <span>₹4600 / ₹15000</span>
+                    </div>
+                    <b class="status-chip safe">Safe</b>
+                </div>
+                <div class="progress-track">
+                    <span style="width: 30.7%"></span>
+                </div>
+                <small>31% used</small>
+            </article>
+            
+            <article class="budget-card">
+                <div class="budget-head">
+                    <div>
+                        <strong>Bills</strong>
+                        <span>₹3800 / ₹18000</span>
+                    </div>
+                    <b class="status-chip safe">Safe</b>
+                </div>
+                <div class="progress-track">
+                    <span style="width: 21.1%"></span>
+                </div>
+                <small>21% used</small>
+            </article>
+            
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Breakdown</p>
+                <h2>Category share</h2>
+            </div>
+        </div>
+        <div class="donut-layout">
+            <div class="donut-chart" style="--donut-segments: #2563eb 0.00% 30.78%, #10b981 30.78% 54.77%, #f59e0b 54.77% 78.76%, #8b5cf6 78.76% 100.00%">
+                <strong>₹69200</strong>
+                <span>Completed expenses</span>
+            </div>
+            <div class="donut-legend">
+                
+                <div class="legend-row">
+                    <span class="legend-dot dot-1"></span>
+                    <span>Travel</span>
+                    <strong>₹21300</strong>
+                </div>
+                
+                <div class="legend-row">
+                    <span class="legend-dot dot-2"></span>
+                    <span>Shopping</span>
+                    <strong>₹16600</strong>
+                </div>
+                
+                <div class="legend-row">
+                    <span class="legend-dot dot-3"></span>
+                    <span>Food</span>
+                    <strong>₹16600</strong>
+                </div>
+                
+                <div class="legend-row">
+                    <span class="legend-dot dot-4"></span>
+                    <span>Bills</span>
+                    <strong>₹14700</strong>
+                </div>
+                
+            </div>
+        </div>
+    </article>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Recent activity</p>
+            <h2>Latest transactions</h2>
+        </div>
+        <a href="/transactions" class="primary-button subtle">View All Transactions</a>
+    </div>
+    <div class="table-shell">
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td>Amazon pantry</td>
+                    <td>Food</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>18 Jun 2026</td>
+                    <td class="amount-negative">
+                        -₹2500.00
+                    </td>
+                    <td><span class="status-pill status-pending">Pending</span></td>
+                </tr>
+                
+                <tr>
+                    <td>Running shoes</td>
+                    <td>Shopping</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>15 Jun 2026</td>
+                    <td class="amount-negative">
+                        -₹4600.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                </tr>
+                
+                <tr>
+                    <td>Mobile and internet</td>
+                    <td>Bills</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>13 Jun 2026</td>
+                    <td class="amount-negative">
+                        -₹3800.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                </tr>
+                
+                <tr>
+                    <td>Weekend trip</td>
+                    <td>Travel</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>12 Jun 2026</td>
+                    <td class="amount-negative">
+                        -₹11500.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                </tr>
+                
+                <tr>
+                    <td>Groceries and cafes</td>
+                    <td>Food</td>
+                    <td><span class="type-pill expense">Expense</span></td>
+                    <td>07 Jun 2026</td>
+                    <td class="amount-negative">
+                        -₹7200.00
+                    </td>
+                    <td><span class="status-pill status-completed">Completed</span></td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+</section>
+
+        </div>
+    </div>
+
+    <div class="drawer-backdrop" data-close-drawer></div>
+    <aside class="drawer" data-drawer>
+        <div class="drawer-header">
+            <div>
+                <p class="eyebrow">Quick action</p>
+                <h2>Add transaction</h2>
+            </div>
+            <button type="button" class="icon-button" data-close-drawer aria-label="Close add transaction panel">
+                <span></span>
+            </button>
+        </div>
+        <p class="drawer-copy">Capture expenses or income without leaving the page.</p>
+
+        <form action="/add" method="post" class="drawer-form">
+            <input type="hidden" name="csrf_token" value="Fmu6-KcrUJ2LW8N-q4Hw8ET6KWY8U1Ku9yy8YmWGMWk">
+
+            <label>
+                Type
+                <select name="transaction_type">
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
+                </select>
+            </label>
+
+            <label>
+                Amount
+                <input type="number" name="amount" step="0.01" min="0.01" placeholder="0.00" required>
+            </label>
+
+            <label>
+                Category
+                <input list="category-options" name="category" placeholder="Food, Salary, Travel" required>
+            </label>
+
+            <label>
+                Date
+                <input type="datetime-local" name="transaction_date" value="2026-06-21T07:03" required>
+            </label>
+
+            <label class="drawer-span">
+                Description
+                <input type="text" name="description" placeholder="Merchant or note">
+            </label>
+
+            <label>
+                Status
+                <select name="status">
+                    <option value="completed">Completed</option>
+                    <option value="pending">Pending</option>
+                </select>
+            </label>
+
+            <datalist id="category-options">
+                
+                <option value="Bills"></option>
+                
+                <option value="Food"></option>
+                
+                <option value="Salary"></option>
+                
+                <option value="Shopping"></option>
+                
+                <option value="Travel"></option>
+                
+            </datalist>
+
+            <div class="drawer-actions">
+                <button type="button" class="secondary-button" data-close-drawer>Cancel</button>
+                <button type="submit" class="primary-button">Save Transaction</button>
+            </div>
+        </form>
+    </aside>
+
+    <script src="http://127.0.0.1:8001/static/app.js"></script>
+</body>
+</html>

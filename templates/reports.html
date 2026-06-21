@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Reports | Expense Tracker{% endblock %}
+{% block content %}
+<section class="report-grid">
+    <article class="report-card">
+        <p>Monthly Report</p>
+        <strong>{% if monthly_report_total < 0 %}-{% endif %}₹{{ "%.0f"|format(monthly_report_total_abs) }}</strong>
+        <span>Current net position</span>
+    </article>
+    <article class="report-card">
+        <p>Quarterly Report</p>
+        <strong>{% if quarterly_report_total < 0 %}-{% endif %}₹{{ "%.0f"|format(quarterly_report_total_abs) }}</strong>
+        <span>Last three periods in the trend window</span>
+    </article>
+    <article class="report-card">
+        <p>Yearly Report</p>
+        <strong>{% if yearly_report_total < 0 %}-{% endif %}₹{{ "%.0f"|format(yearly_report_total_abs) }}</strong>
+        <span>Rolling total across the visible year</span>
+    </article>
+    <article class="report-card">
+        <p>Category Report</p>
+        <strong>{{ category_totals|length }}</strong>
+        <span>Tracked expense categories</span>
+    </article>
+</section>
+
+<section class="page-grid split">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Exports</p>
+                <h2>Download options</h2>
+            </div>
+        </div>
+        <div class="export-actions">
+            <a href="/export" class="primary-button">CSV Export</a>
+            <a href="/reports?msg=export_mock" class="secondary-button">Excel Export</a>
+            <a href="/reports?msg=export_mock" class="secondary-button">PDF Export</a>
+        </div>
+        <p class="support-copy">CSV is active today. The other export surfaces remain visible as staged product flows.</p>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Snapshot</p>
+                <h2>Reporting highlights</h2>
+            </div>
+        </div>
+        <div class="info-card-list">
+            {% for insight in insights %}
+            <article class="info-card">
+                <strong>{{ insight.title }}</strong>
+                <p>{{ insight["copy"] }}</p>
+            </article>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}
