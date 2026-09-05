@@ -10,12 +10,14 @@ from io import StringIO
 from math import isfinite
 from secrets import compare_digest, token_urlsafe
 
+from urllib.parse import urlparse
+
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, Request
+from fastapi import Depends, FastAPI, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from itsdangerous import BadSignature, URLSafeSerializer
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 import database
 
@@ -28,6 +30,7 @@ LEGACY_PASSWORD = os.getenv("APP_PASSWORD")
 SECRET_KEY = os.getenv("SECRET_KEY")
 CSRF_COOKIE = "csrf_token"
 SESSION_COOKIE = "session_token"
+SESSION_MAX_AGE = 7 * 24 * 3600  # 7 days
 TRANSACTION_TYPES = {"expense", "income"}
 TRANSACTION_STATUSES = {"completed", "pending"}
 PAGE_SIZE = 10
@@ -76,10 +79,24 @@ async def lifespan(app):
     yield
 
 
-serializer = URLSafeSerializer(SECRET_KEY)
+serializer = URLSafeTimedSerializer(SECRET_KEY)
 app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Redirect to login on 401 for HTML requests; otherwise return JSON error."""
+    if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+        accept = request.headers.get("accept", "")
+        if "text/html" in accept:
+            return RedirectResponse(url="/login", status_code=302)
+    return Response(
+        content=exc.detail,
+        status_code=exc.status_code,
+        media_type="text/plain",
+    )
 
 
 def hash_password(password, salt=None):
@@ -124,10 +141,21 @@ def get_session_user(request):
     if not session_cookie:
         return None
     try:
-        user = serializer.loads(session_cookie)
-    except BadSignature:
+        user = serializer.loads(session_cookie, max_age=SESSION_MAX_AGE)
+    except (BadSignature, SignatureExpired):
         return None
     return user if user == USERNAME else None
+
+
+async def get_current_user(request: Request) -> str:
+    """FastAPI dependency that returns the authenticated username or raises 401."""
+    user = get_session_user(request)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+    return user
 
 
 def get_csrf_token(request):
@@ -149,6 +177,20 @@ def validate_csrf(request, csrf_token):
     return bool(cookie_token and csrf_token and compare_digest(cookie_token, csrf_token))
 
 
+def safe_redirect_url(request: Request, default: str = "/") -> str:
+    referer = request.headers.get("referer")
+    if not referer:
+        return default
+    parsed = urlparse(referer)
+    host = request.headers.get("host")
+    if parsed.netloc and parsed.netloc != host:
+        return default
+    path = parsed.path or default
+    if parsed.query:
+        path = f"{path}?{parsed.query}"
+    return path
+
+
 def redirect_with_message(message, target="/"):
     return RedirectResponse(url=f"{target}?msg={message}", status_code=302)
 
@@ -161,6 +203,8 @@ def get_messages(key):
         "invalid_amount": "Amount must be greater than zero.",
         "invalid_transaction": "Choose a valid transaction type, status, and date.",
         "invalid_csrf": "Please try again. The form token expired.",
+        "budget_saved": "Budget limit updated successfully.",
+        "budget_deleted": "Budget category removed.",
         "budget_draft": "Budget creation is staged as a future workflow in this prototype.",
         "export_mock": "CSV is live. Excel and PDF exports are staged as premium report actions.",
     }
@@ -196,7 +240,7 @@ def datetime_local_value(value):
 def percent_change(current, previous):
     if previous == 0:
         return 100.0 if current else 0.0
-    return ((current - previous) / previous) * 100
+    return ((current - previous) / abs(previous)) * 100
 
 
 def format_period(period):
@@ -222,7 +266,8 @@ def build_sparkline(values, width=320, height=120, padding=14):
     return " ".join(points)
 
 
-def build_budget_rows(transactions, now):
+def build_budget_rows(transactions, now, budget_limits=None):
+    budget_limits = budget_limits if budget_limits is not None else database.get_budgets()
     current_period = now.strftime("%Y-%m")
     spend_by_category = defaultdict(float)
     for transaction in transactions:
@@ -234,7 +279,7 @@ def build_budget_rows(transactions, now):
             spend_by_category[transaction["category"]] += transaction["amount"]
 
     rows = []
-    for category, limit in BUDGET_LIMITS.items():
+    for category, limit in budget_limits.items():
         spent = spend_by_category.get(category, 0.0)
         usage = spent / limit * 100 if limit else 0
         status = "Safe"
@@ -436,6 +481,7 @@ def summarize_expenses(transactions, now=None):
         "budget_usage_change": current_budget_usage - previous_budget_usage,
         "budget_rows": budgets,
         "insights": build_insights(category_totals, budgets, completed_expenses),
+        "monthly_timeline": monthly_timeline,
         "timeline_window": timeline_window,
         "spending_points": build_sparkline(spending_values),
         "income_points": build_sparkline(income_values),
@@ -521,7 +567,7 @@ def build_shared_context(request, active_page, expenses, selected_expenses=None)
         "user_name": user_name,
         "user_email": f"{session_user}@example.com" if "@" not in session_user else session_user,
         "user_initial": user_name[:1].upper(),
-        "categories": sorted(set(database.list_categories()) | set(BUDGET_LIMITS)),
+        "categories": sorted(set(database.list_categories()) | set(database.get_budgets())),
         "months": months,
         "years": years,
         "nav_items": get_navigation(active_page),
@@ -605,6 +651,8 @@ async def login(
             value=serializer.dumps(username),
             httponly=True,
             samesite="lax",
+            max_age=SESSION_MAX_AGE,
+            secure=request.url.scheme == "https",
         )
         return response
 
@@ -636,6 +684,7 @@ async def home(
     year: str = "",
     transaction_type: str = "",
     status: str = "",
+    user: str = Depends(get_current_user),
 ):
     all_expenses = database.list_expenses()
     selected_expenses = database.list_expenses(
@@ -646,8 +695,6 @@ async def home(
         status=status or None,
     )
     context = build_shared_context(request, "dashboard", all_expenses, selected_expenses)
-    if not context:
-        return RedirectResponse(url="/login", status_code=302)
 
     context.update(
         {
@@ -674,6 +721,7 @@ async def transactions_page(
     date_to: str = "",
     sort: str = "newest",
     page: int = 1,
+    user: str = Depends(get_current_user),
 ):
     all_expenses = database.list_expenses()
     filtered = filter_transactions(
@@ -693,8 +741,6 @@ async def transactions_page(
     page_items = ordered[start : start + PAGE_SIZE]
 
     context = build_shared_context(request, "transactions", all_expenses, filtered)
-    if not context:
-        return RedirectResponse(url="/login", status_code=302)
 
     context.update(
         {
@@ -715,32 +761,26 @@ async def transactions_page(
 
 
 @app.get("/analytics", response_class=HTMLResponse)
-async def analytics_page(request: Request):
+async def analytics_page(request: Request, user: str = Depends(get_current_user)):
     all_expenses = database.list_expenses()
     context = build_shared_context(request, "analytics", all_expenses)
-    if not context:
-        return RedirectResponse(url="/login", status_code=302)
     return render_page(request, "analytics.html", context)
 
 
 @app.get("/budgets", response_class=HTMLResponse)
-async def budgets_page(request: Request):
+async def budgets_page(request: Request, user: str = Depends(get_current_user)):
     all_expenses = database.list_expenses()
     context = build_shared_context(request, "budgets", all_expenses)
-    if not context:
-        return RedirectResponse(url="/login", status_code=302)
     return render_page(request, "budgets.html", context)
 
 
 @app.get("/reports", response_class=HTMLResponse)
-async def reports_page(request: Request):
+async def reports_page(request: Request, user: str = Depends(get_current_user)):
     all_expenses = database.list_expenses()
     context = build_shared_context(request, "reports", all_expenses)
-    if not context:
-        return RedirectResponse(url="/login", status_code=302)
 
-    quarter_total = sum(item["income"] - item["expenses"] for item in context["timeline_window"][-3:])
-    year_total = sum(item["income"] - item["expenses"] for item in context["timeline_window"][-12:])
+    quarter_total = sum(item["income"] - item["expenses"] for item in context["monthly_timeline"][-3:])
+    year_total = sum(item["income"] - item["expenses"] for item in context["monthly_timeline"][-12:])
     context.update(
         {
             "monthly_report_total": context["balance"],
@@ -755,20 +795,16 @@ async def reports_page(request: Request):
 
 
 @app.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request):
+async def settings_page(request: Request, user: str = Depends(get_current_user)):
     all_expenses = database.list_expenses()
     context = build_shared_context(request, "settings", all_expenses)
-    if not context:
-        return RedirectResponse(url="/login", status_code=302)
     return render_page(request, "settings.html", context)
 
 
 @app.get("/coming-soon", response_class=HTMLResponse)
-async def coming_soon_page(request: Request):
+async def coming_soon_page(request: Request, user: str = Depends(get_current_user)):
     all_expenses = database.list_expenses()
     context = build_shared_context(request, "coming-soon", all_expenses)
-    if not context:
-        return RedirectResponse(url="/login", status_code=302)
     return render_page(request, "coming-soon.html", context)
 
 
@@ -782,9 +818,8 @@ async def add_expense(
     status: str = Form("completed"),
     transaction_date: str = Form(""),
     csrf_token: str = Form(...),
+    user: str = Depends(get_current_user),
 ):
-    if not get_session_user(request):
-        return RedirectResponse(url="/login", status_code=302)
     if not validate_csrf(request, csrf_token):
         return redirect_with_message("invalid_csrf")
     if not isfinite(amount) or amount <= 0:
@@ -794,37 +829,34 @@ async def add_expense(
         transaction_type not in TRANSACTION_TYPES
         or status not in TRANSACTION_STATUSES
         or not created_at
+        or not category.strip()
     ):
         return redirect_with_message("invalid_transaction")
 
     database.add_expense(
         amount,
-        category,
+        category.strip(),
         description,
         transaction_type,
         status,
         created_at=created_at,
     )
-    target = request.headers.get("referer") or "/"
+    target = safe_redirect_url(request, default="/")
     return RedirectResponse(url=target, status_code=302)
 
 
 @app.post("/delete/{expense_id}")
-async def delete_expense(request: Request, expense_id: str, csrf_token: str = Form(...)):
-    if not get_session_user(request):
-        return RedirectResponse(url="/login", status_code=302)
+async def delete_expense(request: Request, expense_id: str, csrf_token: str = Form(...), user: str = Depends(get_current_user)):
     if not validate_csrf(request, csrf_token):
         return redirect_with_message("invalid_csrf")
 
     database.delete_expense(expense_id)
-    target = request.headers.get("referer") or "/transactions"
+    target = safe_redirect_url(request, default="/transactions")
     return RedirectResponse(url=target, status_code=302)
 
 
 @app.get("/edit/{expense_id}", response_class=HTMLResponse)
-async def edit_expense_form(request: Request, expense_id: str):
-    if not get_session_user(request):
-        return RedirectResponse(url="/login", status_code=302)
+async def edit_expense_form(request: Request, expense_id: str, user: str = Depends(get_current_user)):
 
     expense = database.get_expense(expense_id)
     if not expense:
@@ -842,7 +874,7 @@ async def edit_expense_form(request: Request, expense_id: str):
             "transaction_type": expense["transaction_type"],
             "status": expense["status"],
             "transaction_date": datetime_local_value(expense["created_at"]),
-            "categories": sorted(set(database.list_categories()) | set(BUDGET_LIMITS)),
+            "categories": sorted(set(database.list_categories()) | set(database.get_budgets())),
             "csrf_token": token,
         },
     )
@@ -861,9 +893,8 @@ async def save_edited_expense(
     status: str = Form("completed"),
     transaction_date: str = Form(""),
     csrf_token: str = Form(...),
+    user: str = Depends(get_current_user),
 ):
-    if not get_session_user(request):
-        return RedirectResponse(url="/login", status_code=302)
     if not validate_csrf(request, csrf_token):
         return redirect_with_message("invalid_csrf")
     if not isfinite(amount) or amount <= 0:
@@ -873,13 +904,14 @@ async def save_edited_expense(
         transaction_type not in TRANSACTION_TYPES
         or status not in TRANSACTION_STATUSES
         or not created_at
+        or not category.strip()
     ):
         return RedirectResponse(url=f"/edit/{expense_id}", status_code=302)
 
     database.update_expense(
         expense_id,
         amount,
-        category,
+        category.strip(),
         description,
         transaction_type,
         status,
@@ -896,10 +928,8 @@ async def export_expenses(
     year: str = "",
     transaction_type: str = "",
     status: str = "",
+    user: str = Depends(get_current_user),
 ):
-    if not get_session_user(request):
-        return RedirectResponse(url="/login", status_code=302)
-
     expenses = database.list_expenses(
         category=category or None,
         month=month or None,
@@ -925,3 +955,34 @@ async def export_expenses(
     filename = f"expenses-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
     return Response(output.getvalue(), media_type="text/csv", headers=headers)
+
+
+@app.post("/budgets/set")
+async def set_budget_action(
+    request: Request,
+    category: str = Form(...),
+    monthly_limit: float = Form(...),
+    csrf_token: str = Form(...),
+    user: str = Depends(get_current_user),
+):
+    if not validate_csrf(request, csrf_token):
+        return redirect_with_message("invalid_csrf", "/budgets")
+    if not isfinite(monthly_limit) or monthly_limit <= 0 or not category.strip():
+        return redirect_with_message("invalid_amount", "/budgets")
+
+    database.set_budget(category.strip(), monthly_limit)
+    return redirect_with_message("budget_saved", "/budgets")
+
+
+@app.post("/budgets/delete/{category}")
+async def delete_budget_action(
+    request: Request,
+    category: str,
+    csrf_token: str = Form(...),
+    user: str = Depends(get_current_user),
+):
+    if not validate_csrf(request, csrf_token):
+        return redirect_with_message("invalid_csrf", "/budgets")
+
+    database.delete_budget(category)
+    return redirect_with_message("budget_deleted", "/budgets")

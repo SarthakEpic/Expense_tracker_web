@@ -6,8 +6,8 @@
         <div class="hero-copy">
             <p>Current Balance</p>
             <strong>{% if balance < 0 %}-{% endif %}₹{{ "%.0f"|format(balance_abs) }}</strong>
-            <span class="{% if income_change >= 0 %}trend-up{% else %}trend-down{% endif %}">
-                {% if income_change >= 0 %}↑{% else %}↓{% endif %} {{ "%.1f"|format(income_change|abs) }}% from last month
+            <span class="{% if savings_change >= 0 %}trend-up{% else %}trend-down{% endif %}">
+                {% if savings_change >= 0 %}↑{% else %}↓{% endif %} {{ "%.1f"|format(savings_change|abs) }}% net momentum
             </span>
         </div>
         <div class="hero-mini">

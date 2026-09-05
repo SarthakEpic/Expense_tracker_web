@@ -200,3 +200,65 @@ def test_page_routes_render(tmp_path):
     for route in ["/transactions", "/analytics", "/budgets", "/reports", "/settings", "/coming-soon"]:
         response = client.get(route)
         assert response.status_code == 200
+
+
+def test_open_redirect_blocked(tmp_path):
+    client = client_with_db(tmp_path)
+    login(client)
+    home = client.get("/")
+    token = page_csrf(home)
+
+    response = client.post(
+        "/add",
+        data={
+            "amount": "50.00",
+            "category": "Food",
+            "description": "Snack",
+            "transaction_type": "expense",
+            "status": "completed",
+            "transaction_date": "2026-06-10T10:00",
+            "csrf_token": token,
+        },
+        headers={"referer": "https://evil.com/steal-creds"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert response.headers["location"] == "/"
+
+
+def test_percent_change_with_negative_previous():
+    assert main.percent_change(200, -100) == 300.0
+    assert main.percent_change(0, 100) == -100.0
+    assert main.percent_change(150, 100) == 50.0
+
+
+def test_dynamic_budget_endpoints(tmp_path):
+    client = client_with_db(tmp_path)
+    login(client)
+    page = client.get("/budgets")
+    token = page_csrf(page)
+
+    response = client.post(
+        "/budgets/set",
+        data={
+            "category": "Entertainment",
+            "monthly_limit": "5000",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert database.get_budgets()["Entertainment"] == 5000.0
+
+    budgets_page = client.get("/budgets")
+    assert "Entertainment" in budgets_page.text
+    token = page_csrf(budgets_page)
+
+    delete_resp = client.post(
+        "/budgets/delete/Entertainment",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+    assert delete_resp.status_code == 302
+    assert "Entertainment" not in database.get_budgets()
+

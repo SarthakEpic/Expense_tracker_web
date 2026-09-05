@@ -7,8 +7,26 @@
             <p class="eyebrow">Budget controls</p>
             <h2>Current month category limits</h2>
         </div>
-        <a href="/reports?msg=budget_draft" class="primary-button subtle">Create Budget</a>
     </div>
+    <form action="/budgets/set" method="post" class="filter-grid" style="margin-bottom: 24px; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.5fr) auto;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label>
+            Category
+            <input list="budget-cat-options" name="category" placeholder="Food, Bills, Travel..." required>
+        </label>
+        <label>
+            Monthly Limit (₹)
+            <input type="number" name="monthly_limit" step="100" min="1" placeholder="e.g. 15000" required>
+        </label>
+        <div class="filter-actions">
+            <button type="submit" class="primary-button">Set Budget</button>
+        </div>
+        <datalist id="budget-cat-options">
+            {% for cat in categories %}
+            <option value="{{ cat }}"></option>
+            {% endfor %}
+        </datalist>
+    </form>
     <div class="budget-grid">
         {% for budget in budget_rows %}
         <article class="budget-detail-card">
@@ -17,7 +35,13 @@
                     <p>{{ budget.category }} Budget</p>
                     <strong>₹{{ "%.0f"|format(budget.spent) }} <span>/ ₹{{ "%.0f"|format(budget.limit) }}</span></strong>
                 </div>
-                <b class="status-chip {{ budget.status|lower|replace(' ', '-') }}">{{ budget.status }}</b>
+                <div style="text-align: right;">
+                    <b class="status-chip {{ budget.status|lower|replace(' ', '-') }}">{{ budget.status }}</b>
+                    <form action="/budgets/delete/{{ budget.category }}" method="post" onsubmit="return confirm('Remove budget for {{ budget.category }}?');" style="margin-top: 6px;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="link-button danger" style="font-size: 11px;">Remove</button>
+                    </form>
+                </div>
             </div>
             <div class="progress-track large">
                 <span style="width: {{ budget.usage|round(1) }}%"></span>

@@ -23,7 +23,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS expenses (
                 id TEXT PRIMARY KEY,
                 amount REAL NOT NULL CHECK(amount > 0),
-                category TEXT NOT NULL,
+                category TEXT NOT NULL CHECK(category != ''),
                 description TEXT DEFAULT '',
                 created_at TEXT NOT NULL
             )
@@ -40,6 +40,30 @@ def init_db():
                 "ALTER TABLE expenses ADD COLUMN status TEXT NOT NULL "
                 "DEFAULT 'completed' CHECK(status IN ('completed', 'pending'))"
             )
+
+        # Performance indexes
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_expenses_created_at ON expenses(created_at)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_expenses_type_status ON expenses(transaction_type, status)")
+
+        # Budgets table
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS budgets (
+                category TEXT PRIMARY KEY,
+                monthly_limit REAL NOT NULL CHECK(monthly_limit > 0)
+            )
+            """
+        )
+        count = conn.execute("SELECT COUNT(*) FROM budgets").fetchone()[0]
+        if count == 0:
+            default_budgets = [
+                ("Food", 12000.0),
+                ("Travel", 9000.0),
+                ("Shopping", 15000.0),
+                ("Bills", 18000.0),
+            ]
+            conn.executemany("INSERT INTO budgets (category, monthly_limit) VALUES (?, ?)", default_budgets)
 
 
 def parse_csv_row(row):
@@ -237,10 +261,11 @@ def monthly_totals(year=None):
     query = """
         SELECT strftime('%Y-%m', created_at) AS period, SUM(amount) AS total
         FROM expenses
+        WHERE transaction_type = 'expense' AND status = 'completed'
     """
     params = []
     if year:
-        query += " WHERE strftime('%Y', created_at) = ?"
+        query += " AND strftime('%Y', created_at) = ?"
         params.append(year)
     query += " GROUP BY period ORDER BY period"
 
@@ -255,6 +280,7 @@ def yearly_totals():
             """
             SELECT strftime('%Y', created_at) AS period, SUM(amount) AS total
             FROM expenses
+            WHERE transaction_type = 'expense' AND status = 'completed'
             GROUP BY period
             ORDER BY period
             """
@@ -268,8 +294,38 @@ def category_totals():
             """
             SELECT category, SUM(amount) AS total
             FROM expenses
+            WHERE transaction_type = 'expense' AND status = 'completed'
             GROUP BY category
             ORDER BY total DESC
             """
         ).fetchall()
     return [(row["category"], row["total"]) for row in rows]
+
+
+def get_budgets():
+    with get_connection() as conn:
+        rows = conn.execute("SELECT category, monthly_limit FROM budgets ORDER BY category").fetchall()
+    return {row["category"]: float(row["monthly_limit"]) for row in rows}
+
+
+def set_budget(category, monthly_limit):
+    category = category.strip()
+    if not category or monthly_limit <= 0:
+        return False
+    with get_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO budgets (category, monthly_limit)
+            VALUES (?, ?)
+            ON CONFLICT(category) DO UPDATE SET monthly_limit = excluded.monthly_limit
+            """,
+            (category, float(monthly_limit)),
+        )
+    return True
+
+
+def delete_budget(category):
+    with get_connection() as conn:
+        result = conn.execute("DELETE FROM budgets WHERE category = ?", (category.strip(),))
+    return result.rowcount > 0
+
