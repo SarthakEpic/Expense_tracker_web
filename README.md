@@ -4,7 +4,6 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57.svg)](https://www.sqlite.org/)
 [![Tests](https://img.shields.io/badge/Tests-Pytest%20Passing-brightgreen.svg)](tests/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A self-hosted personal finance and expense tracking dashboard built with **FastAPI**, **SQLite**, and **Jinja2**. Designed for speed, data ownership, and daily usability without heavy third-party JavaScript runtimes or external database servers.
 
@@ -200,19 +199,8 @@ Tests cover:
 
 ---
 
-## Roadmap
+## License & Rights
 
-- [x] Single-user authentication & session timeout
-- [x] Multi-criteria filtering, sorting, and pagination
-- [x] Native SVG & CSS responsive charts
-- [x] Persistent category budgeting & status tracking
-- [ ] Multi-tenant user registration and workspace isolation
-- [ ] Recurring subscription auto-logging
-- [ ] REST API endpoints with bearer token auth
-- [ ] Docker container and Docker Compose configuration
+Copyright &copy; 2026. All rights reserved.
 
----
-
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
+This project is currently private and reserved for personal and evaluation use. Commercial distribution, public redistribution, or unauthorized mirroring without explicit prior permission is strictly prohibited. Formal open-source licensing will be determined and published in a future release.
