@@ -13,6 +13,12 @@ A self-hosted personal finance and expense tracking dashboard built with **FastA
 
 ## Key Features
 
+### 👥 Multi-User Accounts
+- **Private ledgers per person:** every expense, income entry, and budget belongs to its owner — users never see each other's data.
+- **Invite-only workspace:** the first account is created via `/register` (or seeded from env credentials); after that, only the admin can add users — no public sign-up on a money app.
+- **Admin controls in Settings:** add users, reset a forgotten password for any member (that's the built-in "forgot password" flow), and delete accounts along with their data.
+- **Per-user defaults:** each new account starts with its own budget limits, fully editable.
+
 ### 📒 Transaction Ledger & Cash Flow
 - Record both **expenses** and **income** with custom categories, dates, merchants, and descriptions.
 - Track settlement states with **completed** vs. **pending** transactions.
@@ -43,6 +49,7 @@ A self-hosted personal finance and expense tracking dashboard built with **FastA
 - **Zero Cloud Tracking:** All financial data remains in your own database (local SQLite file, or your own Neon Postgres in the cloud).
 - **PBKDF2 Password Hashing:** Credentials hashed with `hashlib.pbkdf2_hmac` (`sha256`, 120,000 iterations, random salt).
 - **In-App Credential Management:** Change username and password from **Settings → Login credentials** — stored in the database, effective immediately, no redeploy.
+- **Invite-Only Access:** No open registration; the admin manages who gets an account, with brute-force lockout on repeated failed logins.
 - **Brute-Force Lockout:** Repeated failed logins trigger an escalating time lockout per IP + username.
 - **Cryptographically Signed Sessions:** HTTP-only cookies signed with `URLSafeTimedSerializer` and strict 7-day expiration.
 - **CSRF Defense:** Double-submit cookie verification across all mutating form requests.

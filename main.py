@@ -142,19 +142,26 @@ def verify_password(password, password_hash):
     return compare_digest(digest, expected)
 
 
+def authenticate(username, password):
+    """Return the user row for valid credentials, else None."""
+    user = database.get_user_by_username(username)
+    if user:
+        return user if verify_password(password, user["password_hash"]) else None
+
+    # Bootstrap fallback for a database with no users at all (env seeding
+    # normally covers this at boot): create the env admin on first login.
+    if database.count_users() == 0 and username == USERNAME:
+        if PASSWORD_HASH and verify_password(password, PASSWORD_HASH):
+            user_id = database.create_user(username, PASSWORD_HASH, is_admin=True)
+            return database.get_user_by_id(user_id)
+        if LEGACY_PASSWORD and hmac.compare_digest(password, LEGACY_PASSWORD):
+            user_id = database.create_user(username, hash_password(password), is_admin=True)
+            return database.get_user_by_id(user_id)
+    return None
+
+
 def valid_login(username, password):
-    stored_hash = database.get_user_password_hash(username)
-    if stored_hash:
-        # Once seeded, the database credential is the only valid one so that
-        # changed passwords fully invalidate the previous one.
-        return verify_password(password, stored_hash)
-    # Fresh database (init_db seeds it from env on boot): accept the env
-    # bootstrap credential directly.
-    if username != USERNAME:
-        return False
-    if PASSWORD_HASH:
-        return verify_password(password, PASSWORD_HASH)
-    return bool(LEGACY_PASSWORD and hmac.compare_digest(password, LEGACY_PASSWORD))
+    return authenticate(username, password) is not None
 
 
 def login_throttle_key(request, username):
@@ -191,22 +198,28 @@ def get_session_user(request):
     if not session_cookie:
         return None
     try:
-        user = serializer.loads(session_cookie, max_age=SESSION_MAX_AGE)
+        user_id = serializer.loads(session_cookie, max_age=SESSION_MAX_AGE)
     except (BadSignature, SignatureExpired):
         return None
-    if user == USERNAME or database.get_user_password_hash(user):
-        return user
+    if isinstance(user_id, int):
+        return database.get_user_by_id(user_id)
     return None
 
 
-async def get_current_user(request: Request) -> str:
-    """FastAPI dependency that returns the authenticated username or raises 401."""
+async def get_current_user(request: Request) -> dict:
+    """FastAPI dependency that returns the authenticated user row or raises 401."""
     user = get_session_user(request)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
+    return user
+
+
+async def get_current_admin(user: dict = Depends(get_current_user)) -> dict:
+    if not user["is_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
 
@@ -269,12 +282,22 @@ def get_messages(key):
         "weak_password": "New password must be at least 8 characters.",
         "password_mismatch": "New passwords do not match.",
         "login_throttled": "Too many failed attempts. Please wait before trying again.",
+        "username_taken": "That username is already in use.",
+        "user_created": "User account created.",
+        "user_deleted": "User account and its data removed.",
+        "last_admin": "The last admin account cannot be removed.",
+        "password_reset": "Password reset for the user.",
+        "invalid_username": "Usernames need at least 3 characters.",
     }
     return messages.get(key, "")
 
 
 def display_name(username):
     return username.split("@")[0].replace("_", " ").replace("-", " ").title()
+
+
+def registration_open():
+    return database.count_users() == 0
 
 
 def unique_periods(expenses):
@@ -329,7 +352,9 @@ def build_sparkline(values, width=320, height=120, padding=14):
 
 
 def build_budget_rows(transactions, now, budget_limits=None):
-    budget_limits = budget_limits if budget_limits is not None else database.get_budgets()
+    # Callers pass the current user's budgets; an empty dict is the safe
+    # default for direct computation calls that don't need budget rows.
+    budget_limits = budget_limits if budget_limits is not None else {}
     current_period = now.strftime("%Y-%m")
     spend_by_category = defaultdict(float)
     for transaction in transactions:
@@ -408,7 +433,7 @@ def build_insights(category_totals, budgets, expenses):
     return insights[:3]
 
 
-def summarize_expenses(transactions, now=None):
+def summarize_expenses(transactions, now=None, budget_limits=None):
     now = now or datetime.now()
     completed = [item for item in transactions if item["status"] == "completed"]
     completed_expenses = [item for item in completed if item["transaction_type"] == "expense"]
@@ -498,7 +523,7 @@ def summarize_expenses(transactions, now=None):
         default=0.0,
     )
 
-    budgets = build_budget_rows(transactions, now)
+    budgets = build_budget_rows(transactions, now, budget_limits)
     total_income = sum(item["amount"] for item in completed_income)
     total_spent = sum(item["amount"] for item in completed_expenses)
     total_savings = total_income - total_spent
@@ -617,20 +642,27 @@ def build_shared_context(request, active_page, expenses, selected_expenses=None)
         return None
 
     token = get_csrf_token(request)
-    user_name = display_name(session_user)
+    username = session_user["username"]
+    user_name = display_name(username)
     selected_expenses = selected_expenses if selected_expenses is not None else expenses
     years, months = unique_periods(expenses)
-    summary = summarize_expenses(selected_expenses)
+    summary = summarize_expenses(
+        selected_expenses, budget_limits=database.get_budgets(session_user["id"])
+    )
     now_value = datetime.now().strftime("%Y-%m-%dT%H:%M")
 
     return {
         "message": get_messages(request.query_params.get("msg")),
         "csrf_token": token,
         "user_name": user_name,
-        "username": session_user,
-        "user_email": f"{session_user}@example.com" if "@" not in session_user else session_user,
+        "username": username,
+        "is_admin": bool(session_user["is_admin"]),
+        "user_email": f"{username}@example.com" if "@" not in username else username,
         "user_initial": user_name[:1].upper(),
-        "categories": sorted(set(database.list_categories()) | set(database.get_budgets())),
+        "categories": sorted(
+            set(database.list_categories(session_user["id"]))
+            | set(database.get_budgets(session_user["id"]))
+        ),
         "months": months,
         "years": years,
         "nav_items": get_navigation(active_page),
@@ -697,7 +729,7 @@ async def login_page(request: Request):
     response = templates.TemplateResponse(
         request,
         "login.html",
-        {"error": "", "csrf_token": token},
+        {"error": "", "csrf_token": token, "registration_open": registration_open()},
     )
     attach_csrf_cookie(response, token, secure=request_is_secure(request))
     return response
@@ -725,18 +757,20 @@ async def login(
                     f"Try again in {login_lockout_remaining(throttle_key)} seconds."
                 ),
                 "csrf_token": token,
+                "registration_open": registration_open(),
             },
             status_code=429,
         )
         attach_csrf_cookie(response, token, secure=request_is_secure(request))
         return response
 
-    if valid_login(username, password):
+    user = authenticate(username, password)
+    if user:
         clear_login_failures(throttle_key)
         response = RedirectResponse(url="/", status_code=302)
         response.set_cookie(
             key=SESSION_COOKIE,
-            value=serializer.dumps(username),
+            value=serializer.dumps(user["id"]),
             httponly=True,
             samesite="lax",
             max_age=SESSION_MAX_AGE,
@@ -752,9 +786,73 @@ async def login(
         {
             "error": "Invalid username or password.",
             "csrf_token": token,
+            "registration_open": registration_open(),
         },
     )
     attach_csrf_cookie(response, token, secure=request_is_secure(request))
+    return response
+
+
+@app.get("/register", response_class=HTMLResponse)
+async def register_page(request: Request):
+    if not registration_open():
+        return RedirectResponse(url="/login", status_code=302)
+    token = get_csrf_token(request)
+    response = templates.TemplateResponse(
+        request,
+        "register.html",
+        {"error": "", "csrf_token": token},
+    )
+    attach_csrf_cookie(response, token, secure=request_is_secure(request))
+    return response
+
+
+@app.post("/register")
+async def register(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+    csrf_token: str = Form(...),
+):
+    if not registration_open():
+        return RedirectResponse(url="/login", status_code=302)
+    if not validate_csrf(request, csrf_token):
+        return RedirectResponse(url="/register", status_code=302)
+
+    username = username.strip()
+    error = None
+    if len(username) < 3:
+        error = "Usernames need at least 3 characters."
+    elif len(password) < 8:
+        error = "Password must be at least 8 characters."
+    elif password != confirm_password:
+        error = "Passwords do not match."
+    elif database.get_user_by_username(username):
+        error = "That username is already taken."
+
+    if error:
+        token = get_csrf_token(request)
+        response = templates.TemplateResponse(
+            request,
+            "register.html",
+            {"error": error, "csrf_token": token},
+        )
+        attach_csrf_cookie(response, token, secure=request_is_secure(request))
+        return response
+
+    user_id = database.create_user(username, hash_password(password), is_admin=True)
+    database.assign_orphan_data(user_id)
+
+    response = RedirectResponse(url="/", status_code=302)
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=serializer.dumps(user_id),
+        httponly=True,
+        samesite="lax",
+        max_age=SESSION_MAX_AGE,
+        secure=request_is_secure(request),
+    )
     return response
 
 
@@ -773,10 +871,11 @@ async def home(
     year: str = "",
     transaction_type: str = "",
     status: str = "",
-    user: str = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
-    all_expenses = database.list_expenses()
+    all_expenses = database.list_expenses(user["id"])
     selected_expenses = database.list_expenses(
+        user["id"],
         category=category or None,
         month=month or None,
         year=year or None,
@@ -810,9 +909,9 @@ async def transactions_page(
     date_to: str = "",
     sort: str = "newest",
     page: int = 1,
-    user: str = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
-    all_expenses = database.list_expenses()
+    all_expenses = database.list_expenses(user["id"])
     filtered = filter_transactions(
         all_expenses,
         search=search,
@@ -851,21 +950,21 @@ async def transactions_page(
 
 @app.get("/analytics", response_class=HTMLResponse)
 async def analytics_page(request: Request, user: str = Depends(get_current_user)):
-    all_expenses = database.list_expenses()
+    all_expenses = database.list_expenses(user["id"])
     context = build_shared_context(request, "analytics", all_expenses)
     return render_page(request, "analytics.html", context)
 
 
 @app.get("/budgets", response_class=HTMLResponse)
 async def budgets_page(request: Request, user: str = Depends(get_current_user)):
-    all_expenses = database.list_expenses()
+    all_expenses = database.list_expenses(user["id"])
     context = build_shared_context(request, "budgets", all_expenses)
     return render_page(request, "budgets.html", context)
 
 
 @app.get("/reports", response_class=HTMLResponse)
 async def reports_page(request: Request, user: str = Depends(get_current_user)):
-    all_expenses = database.list_expenses()
+    all_expenses = database.list_expenses(user["id"])
     context = build_shared_context(request, "reports", all_expenses)
 
     quarter_total = sum(item["income"] - item["expenses"] for item in context["monthly_timeline"][-3:])
@@ -884,9 +983,11 @@ async def reports_page(request: Request, user: str = Depends(get_current_user)):
 
 
 @app.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request, user: str = Depends(get_current_user)):
-    all_expenses = database.list_expenses()
+async def settings_page(request: Request, user: dict = Depends(get_current_user)):
+    all_expenses = database.list_expenses(user["id"])
     context = build_shared_context(request, "settings", all_expenses)
+    if context and context.get("is_admin"):
+        context["managed_users"] = database.list_users()
     return render_page(request, "settings.html", context)
 
 
@@ -898,37 +999,100 @@ async def update_credentials(
     new_password: str = Form(""),
     confirm_password: str = Form(""),
     csrf_token: str = Form(...),
-    user: str = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     if not validate_csrf(request, csrf_token):
         return redirect_with_message("invalid_csrf", "/settings")
-    if not valid_login(user, current_password):
+    if not authenticate(user["username"], current_password):
         return redirect_with_message("wrong_current_password", "/settings")
 
-    new_username = new_username.strip() or user
+    new_username = new_username.strip() or user["username"]
     if len(new_password) < 8:
         return redirect_with_message("weak_password", "/settings")
     if new_password != confirm_password:
         return redirect_with_message("password_mismatch", "/settings")
+    if new_username != user["username"] and database.get_user_by_username(new_username):
+        return redirect_with_message("username_taken", "/settings")
 
-    database.update_user_credentials(new_username, hash_password(new_password), user)
+    database.update_user_credentials(user["id"], new_username, hash_password(new_password))
     login_failures.clear()
 
-    response = redirect_with_message("credentials_updated", "/settings")
-    response.set_cookie(
-        key=SESSION_COOKIE,
-        value=serializer.dumps(new_username),
-        httponly=True,
-        samesite="lax",
-        max_age=SESSION_MAX_AGE,
-        secure=request_is_secure(request),
-    )
-    return response
+    return redirect_with_message("credentials_updated", "/settings")
+
+
+@app.post("/admin/users/add")
+async def admin_add_user(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+    csrf_token: str = Form(...),
+    admin: dict = Depends(get_current_admin),
+):
+    if not validate_csrf(request, csrf_token):
+        return redirect_with_message("invalid_csrf", "/settings")
+
+    username = username.strip()
+    if len(username) < 3:
+        return redirect_with_message("invalid_username", "/settings")
+    if len(password) < 8:
+        return redirect_with_message("weak_password", "/settings")
+    if password != confirm_password:
+        return redirect_with_message("password_mismatch", "/settings")
+    if database.get_user_by_username(username):
+        return redirect_with_message("username_taken", "/settings")
+
+    database.create_user(username, hash_password(password), is_admin=False)
+    return redirect_with_message("user_created", "/settings")
+
+
+@app.post("/admin/users/delete/{user_id}")
+async def admin_delete_user(
+    request: Request,
+    user_id: int,
+    csrf_token: str = Form(...),
+    admin: dict = Depends(get_current_admin),
+):
+    if not validate_csrf(request, csrf_token):
+        return redirect_with_message("invalid_csrf", "/settings")
+    if user_id == admin["id"]:
+        return redirect_with_message("last_admin", "/settings")
+
+    target = database.get_user_by_id(user_id)
+    if not target:
+        return redirect_with_message("invalid_transaction", "/settings")
+    if target["is_admin"] and sum(1 for u in database.list_users() if u["is_admin"]) <= 1:
+        return redirect_with_message("last_admin", "/settings")
+
+    database.delete_user(user_id)
+    return redirect_with_message("user_deleted", "/settings")
+
+
+@app.post("/admin/users/reset-password/{user_id}")
+async def admin_reset_password(
+    request: Request,
+    user_id: int,
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    csrf_token: str = Form(...),
+    admin: dict = Depends(get_current_admin),
+):
+    if not validate_csrf(request, csrf_token):
+        return redirect_with_message("invalid_csrf", "/settings")
+    if len(new_password) < 8:
+        return redirect_with_message("weak_password", "/settings")
+    if new_password != confirm_password:
+        return redirect_with_message("password_mismatch", "/settings")
+    if not database.get_user_by_id(user_id):
+        return redirect_with_message("invalid_transaction", "/settings")
+
+    database.set_user_password(user_id, hash_password(new_password))
+    return redirect_with_message("password_reset", "/settings")
 
 
 @app.get("/coming-soon", response_class=HTMLResponse)
 async def coming_soon_page(request: Request, user: str = Depends(get_current_user)):
-    all_expenses = database.list_expenses()
+    all_expenses = database.list_expenses(user["id"])
     context = build_shared_context(request, "coming-soon", all_expenses)
     return render_page(request, "coming-soon.html", context)
 
@@ -943,7 +1107,7 @@ async def add_expense(
     status: str = Form("completed"),
     transaction_date: str = Form(""),
     csrf_token: str = Form(...),
-    user: str = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     if not validate_csrf(request, csrf_token):
         return redirect_with_message("invalid_csrf")
@@ -959,6 +1123,7 @@ async def add_expense(
         return redirect_with_message("invalid_transaction")
 
     database.add_expense(
+        user["id"],
         amount,
         category.strip(),
         description,
@@ -975,7 +1140,7 @@ async def delete_expense(request: Request, expense_id: str, csrf_token: str = Fo
     if not validate_csrf(request, csrf_token):
         return redirect_with_message("invalid_csrf")
 
-    database.delete_expense(expense_id)
+    database.delete_expense(user["id"], expense_id)
     target = safe_redirect_url(request, default="/transactions")
     return RedirectResponse(url=target, status_code=302)
 
@@ -983,7 +1148,7 @@ async def delete_expense(request: Request, expense_id: str, csrf_token: str = Fo
 @app.get("/edit/{expense_id}", response_class=HTMLResponse)
 async def edit_expense_form(request: Request, expense_id: str, user: str = Depends(get_current_user)):
 
-    expense = database.get_expense(expense_id)
+    expense = database.get_expense(user["id"], expense_id)
     if not expense:
         return RedirectResponse(url="/transactions", status_code=302)
 
@@ -999,7 +1164,10 @@ async def edit_expense_form(request: Request, expense_id: str, user: str = Depen
             "transaction_type": expense["transaction_type"],
             "status": expense["status"],
             "transaction_date": datetime_local_value(expense["created_at"]),
-            "categories": sorted(set(database.list_categories()) | set(database.get_budgets())),
+            "categories": sorted(
+                set(database.list_categories(user["id"]))
+                | set(database.get_budgets(user["id"]))
+            ),
             "csrf_token": token,
         },
     )
@@ -1018,7 +1186,7 @@ async def save_edited_expense(
     status: str = Form("completed"),
     transaction_date: str = Form(""),
     csrf_token: str = Form(...),
-    user: str = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     if not validate_csrf(request, csrf_token):
         return redirect_with_message("invalid_csrf")
@@ -1034,6 +1202,7 @@ async def save_edited_expense(
         return RedirectResponse(url=f"/edit/{expense_id}", status_code=302)
 
     database.update_expense(
+        user["id"],
         expense_id,
         amount,
         category.strip(),
@@ -1053,9 +1222,10 @@ async def export_expenses(
     year: str = "",
     transaction_type: str = "",
     status: str = "",
-    user: str = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     expenses = database.list_expenses(
+        user["id"],
         category=category or None,
         month=month or None,
         year=year or None,
@@ -1088,14 +1258,14 @@ async def set_budget_action(
     category: str = Form(...),
     monthly_limit: float = Form(...),
     csrf_token: str = Form(...),
-    user: str = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     if not validate_csrf(request, csrf_token):
         return redirect_with_message("invalid_csrf", "/budgets")
     if not isfinite(monthly_limit) or monthly_limit <= 0 or not category.strip():
         return redirect_with_message("invalid_amount", "/budgets")
 
-    database.set_budget(category.strip(), monthly_limit)
+    database.set_budget(user["id"], category.strip(), monthly_limit)
     return redirect_with_message("budget_saved", "/budgets")
 
 
@@ -1104,10 +1274,10 @@ async def delete_budget_action(
     request: Request,
     category: str,
     csrf_token: str = Form(...),
-    user: str = Depends(get_current_user),
+    user: dict = Depends(get_current_user),
 ):
     if not validate_csrf(request, csrf_token):
         return redirect_with_message("invalid_csrf", "/budgets")
 
-    database.delete_budget(category)
+    database.delete_budget(user["id"], category)
     return redirect_with_message("budget_deleted", "/budgets")

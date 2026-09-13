@@ -65,15 +65,21 @@ command `pip install -r requirements.txt`, start command
 2. `curl https://YOUR-SERVICE.onrender.com/health` → `{"status":"ok"}`
 3. Open the app URL and log in with the credentials from step 2.
 
-On first boot the app copies your env credentials into its `app_users` table.
-From then on, **change your username/password right in the app**:
-**Settings → Login credentials**. The new values take effect immediately — no
-redeploy, no env edits.
+On first boot the app copies your env credentials into its `app_users` table
+as the **admin** account. From then on, **change your username/password right
+in the app**: **Settings → Login credentials**. The new values take effect
+immediately — no redeploy, no env edits.
 
-**Forgot your password?** Open your Neon project's **SQL editor** and run
+**Multi-user:** in **Settings → User accounts** (visible to the admin only)
+you can add accounts for family or friends, reset a member's password if they
+forget theirs, and delete accounts (their data goes with them). Everyone sees
+only their own expenses and budgets. There is no public sign-up — after the
+first account exists, `/register` is closed.
+
+**Forgot the admin password?** Open your Neon project's **SQL editor** and run
 `DELETE FROM app_users;`, then restart the Render service ("Manual Deploy →
-Restart" or suspend/resume). On boot the app re-seeds from the env vars, and
-you can log in with those.
+Restart" or suspend/resume). On boot the app re-seeds the admin from the env
+vars, and any existing transactions are re-assigned to it automatically.
 
 ---
 

@@ -34,6 +34,10 @@
             <div class="drawer-actions">
                 <button type="submit" class="primary-button">Login</button>
             </div>
+
+            {% if registration_open %}
+            <p class="subtitle">First time here? <a href="/register">Create the owner account</a>.</p>
+            {% endif %}
         </form>
     </main>
 </body>

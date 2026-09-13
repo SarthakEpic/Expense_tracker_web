@@ -104,4 +104,55 @@
         <p class="support-copy">Changes are saved to the app database and take effect immediately, no redeploy needed.</p>
     </article>
 </section>
+
+{% if is_admin %}
+<section class="page-grid">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Admin</p>
+                <h2>User accounts</h2>
+            </div>
+        </div>
+        <div class="info-card-list">
+            {% for account in managed_users %}
+            <article class="info-card">
+                <strong>{{ account.username }}{% if account.is_admin %} · admin{% endif %}</strong>
+                <p>Joined {{ account.created_at[:10] }}</p>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                    <form action="/admin/users/reset-password/{{ account.id }}" method="post" style="display: flex; gap: 6px;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="password" name="new_password" placeholder="New password" required minlength="8" style="min-width: 150px;">
+                        <input type="password" name="confirm_password" placeholder="Confirm" required minlength="8" style="min-width: 150px;">
+                        <button type="submit">Reset password</button>
+                    </form>
+                    {% if not account.is_admin or managed_users|length > 1 %}
+                    {% if account.username != username %}
+                    <form action="/admin/users/delete/{{ account.id }}" method="post" onsubmit="return confirm('Delete {{ account.username }} and all their data?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit">Delete</button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        <form action="/admin/users/add" method="post" class="credential-form" style="display: grid; gap: 12px; max-width: 420px; margin-top: 18px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label>New username
+                <input type="text" name="username" required minlength="3">
+            </label>
+            <label>Password (minimum 8 characters)
+                <input type="password" name="password" required minlength="8" autocomplete="new-password">
+            </label>
+            <label>Confirm password
+                <input type="password" name="confirm_password" required minlength="8" autocomplete="new-password">
+            </label>
+            <button type="submit">Add user</button>
+        </form>
+        <p class="support-copy">Each person logs in separately and sees only their own expenses and budgets. Resetting a password is how you unlock an account if its owner forgets theirs.</p>
+    </article>
+</section>
+{% endif %}
 {% endblock %}

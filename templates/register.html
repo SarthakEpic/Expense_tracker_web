@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create Account | Expense Tracker</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="auth-surface">
+    <main class="auth-page">
+        <form action="/register" method="post" class="auth-card premium-card">
+            <p class="eyebrow">Expense Tracker</p>
+            <h1>Create your account</h1>
+            <p class="subtitle">Set up the owner account for this workspace.</p>
+
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            {% if error %}
+            <p class="error">{{ error }}</p>
+            {% endif %}
+
+            <div class="auth-grid">
+                <label class="auth-span">
+                    Username
+                    <input type="text" name="username" required minlength="3" autofocus>
+                </label>
+
+                <label class="auth-span">
+                    Password (minimum 8 characters)
+                    <input type="password" name="password" required minlength="8">
+                </label>
+
+                <label class="auth-span">
+                    Confirm password
+                    <input type="password" name="confirm_password" required minlength="8">
+                </label>
+            </div>
+
+            <div class="drawer-actions">
+                <button type="submit" class="primary-button">Create account</button>
+            </div>
+
+            <p class="subtitle">Registration is only open until the first account exists.</p>
+        </form>
+    </main>
+</body>
+</html>
