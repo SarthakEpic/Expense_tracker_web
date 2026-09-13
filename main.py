@@ -622,6 +622,12 @@ def filter_transactions(transactions, search="", category="", transaction_type="
     return filtered
 
 
+@app.get("/health")
+async def health():
+    """Unauthenticated liveness probe for platform health checks."""
+    return {"status": "ok"}
+
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     token = get_csrf_token(request)

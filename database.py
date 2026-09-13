@@ -1,4 +1,5 @@
 import csv
+import os
 import sqlite3
 import uuid
 from datetime import datetime
@@ -9,14 +10,74 @@ DATABASE_FILE = Path("expenses.db")
 CSV_FILE = Path("expenses.csv")
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+DEFAULT_BUDGETS = [
+    ("Food", 12000.0),
+    ("Travel", 9000.0),
+    ("Shopping", 15000.0),
+    ("Bills", 18000.0),
+]
+
+
+def database_url():
+    """Postgres connection string, or empty when running on local SQLite."""
+    url = os.getenv("DATABASE_URL", "").strip()
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    return url
+
 
 def get_connection():
+    url = database_url()
+    if url:
+        return _PgConnection(_pg_connect(url))
     conn = sqlite3.connect(DATABASE_FILE)
     conn.row_factory = sqlite3.Row
     return conn
 
 
+def _pg_connect(url):
+    import psycopg
+    from psycopg.rows import dict_row
+
+    # Neon's pooler runs PgBouncer in transaction mode, which cannot serve
+    # psycopg's server-side prepared statements.
+    return psycopg.connect(url, row_factory=dict_row, prepare_threshold=None)
+
+
+class _PgConnection:
+    """sqlite3-shaped wrapper over a psycopg connection.
+
+    Supports exactly the surface this module uses: `with` blocks that commit
+    or roll back and then close, `?` placeholders, executemany, and cursors
+    that fetch rows by column name.
+    """
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    def execute(self, query, params=()):
+        return self._conn.execute(query.replace("?", "%s"), tuple(params))
+
+    def executemany(self, query, seq):
+        rows = [tuple(params) for params in seq]
+        return self._conn.cursor().executemany(query.replace("?", "%s"), rows)
+
+    def __enter__(self):
+        self._conn.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        try:
+            return self._conn.__exit__(exc_type, exc, tb)
+        finally:
+            self._conn.close()
+
+
 def init_db():
+    if database_url():
+        _init_postgres()
+        return
+
     with get_connection() as conn:
         conn.execute(
             """
@@ -41,12 +102,8 @@ def init_db():
                 "DEFAULT 'completed' CHECK(status IN ('completed', 'pending'))"
             )
 
-        # Performance indexes
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_expenses_created_at ON expenses(created_at)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_expenses_type_status ON expenses(transaction_type, status)")
+        _create_indexes(conn)
 
-        # Budgets table
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS budgets (
@@ -55,15 +112,48 @@ def init_db():
             )
             """
         )
-        count = conn.execute("SELECT COUNT(*) FROM budgets").fetchone()[0]
-        if count == 0:
-            default_budgets = [
-                ("Food", 12000.0),
-                ("Travel", 9000.0),
-                ("Shopping", 15000.0),
-                ("Bills", 18000.0),
-            ]
-            conn.executemany("INSERT INTO budgets (category, monthly_limit) VALUES (?, ?)", default_budgets)
+        _seed_default_budgets(conn)
+
+
+def _init_postgres():
+    with get_connection() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS expenses (
+                id TEXT PRIMARY KEY,
+                amount DOUBLE PRECISION NOT NULL CHECK(amount > 0),
+                category TEXT NOT NULL CHECK(category != ''),
+                description TEXT DEFAULT '',
+                transaction_type TEXT NOT NULL DEFAULT 'expense'
+                    CHECK(transaction_type IN ('expense', 'income')),
+                status TEXT NOT NULL DEFAULT 'completed'
+                    CHECK(status IN ('completed', 'pending')),
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        _create_indexes(conn)
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS budgets (
+                category TEXT PRIMARY KEY,
+                monthly_limit DOUBLE PRECISION NOT NULL CHECK(monthly_limit > 0)
+            )
+            """
+        )
+        _seed_default_budgets(conn)
+
+
+def _create_indexes(conn):
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_expenses_created_at ON expenses(created_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_expenses_type_status ON expenses(transaction_type, status)")
+
+
+def _seed_default_budgets(conn):
+    count = conn.execute("SELECT COUNT(*) AS total FROM budgets").fetchone()["total"]
+    if count == 0:
+        conn.executemany("INSERT INTO budgets (category, monthly_limit) VALUES (?, ?)", DEFAULT_BUDGETS)
 
 
 def parse_csv_row(row):
@@ -94,7 +184,7 @@ def migrate_csv_to_sqlite(csv_file=CSV_FILE):
         return
 
     with get_connection() as conn:
-        existing_count = conn.execute("SELECT COUNT(*) FROM expenses").fetchone()[0]
+        existing_count = conn.execute("SELECT COUNT(*) AS total FROM expenses").fetchone()["total"]
         if existing_count:
             return
 
@@ -104,9 +194,10 @@ def migrate_csv_to_sqlite(csv_file=CSV_FILE):
                 if expense:
                     conn.execute(
                         """
-                        INSERT OR IGNORE INTO expenses
+                        INSERT INTO expenses
                             (id, amount, category, description, created_at)
                         VALUES (?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO NOTHING
                         """,
                         (
                             expense["id"],
@@ -144,10 +235,10 @@ def list_expenses(category=None, month=None, year=None, transaction_type=None, s
         filters.append("category = ?")
         params.append(category)
     if month:
-        filters.append("strftime('%Y-%m', created_at) = ?")
+        filters.append("substr(created_at, 1, 7) = ?")
         params.append(month)
     if year:
-        filters.append("strftime('%Y', created_at) = ?")
+        filters.append("substr(created_at, 1, 4) = ?")
         params.append(year)
     if transaction_type:
         filters.append("transaction_type = ?")
@@ -259,13 +350,13 @@ def list_categories():
 
 def monthly_totals(year=None):
     query = """
-        SELECT strftime('%Y-%m', created_at) AS period, SUM(amount) AS total
+        SELECT substr(created_at, 1, 7) AS period, SUM(amount) AS total
         FROM expenses
         WHERE transaction_type = 'expense' AND status = 'completed'
     """
     params = []
     if year:
-        query += " AND strftime('%Y', created_at) = ?"
+        query += " AND substr(created_at, 1, 4) = ?"
         params.append(year)
     query += " GROUP BY period ORDER BY period"
 
@@ -278,7 +369,7 @@ def yearly_totals():
     with get_connection() as conn:
         rows = conn.execute(
             """
-            SELECT strftime('%Y', created_at) AS period, SUM(amount) AS total
+            SELECT substr(created_at, 1, 4) AS period, SUM(amount) AS total
             FROM expenses
             WHERE transaction_type = 'expense' AND status = 'completed'
             GROUP BY period
@@ -328,4 +419,3 @@ def delete_budget(category):
     with get_connection() as conn:
         result = conn.execute("DELETE FROM budgets WHERE category = ?", (category.strip(),))
     return result.rowcount > 0
-

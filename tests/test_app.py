@@ -73,6 +73,13 @@ def add_sample_expense(
     return database.list_expenses()[0]
 
 
+def test_health_endpoint(tmp_path):
+    client = client_with_db(tmp_path)
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_login_add_edit_delete_expense(tmp_path):
     client = client_with_db(tmp_path)
     login(client)

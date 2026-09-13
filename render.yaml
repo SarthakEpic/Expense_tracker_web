@@ -1,0 +1,24 @@
+# Render Blueprint — deploys the FastAPI app as a free web service.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: expense-tracker
+    runtime: python
+    plan: free
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.5"
+      - key: TZ
+        value: "Asia/Kolkata"
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_USERNAME
+        sync: false
+      - key: APP_PASSWORD_HASH
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
