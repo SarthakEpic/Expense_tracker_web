@@ -9,3 +9,6 @@ static/monthly_chart.png
 .pytest_cache/
 qa_artifacts/
 *.db-journal
+venv/
+demo/
+.vs/
