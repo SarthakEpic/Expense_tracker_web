@@ -1,6 +1,8 @@
+import atexit
 import csv
 import os
 import sqlite3
+import threading
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -26,34 +28,66 @@ def database_url():
     return url
 
 
+_pg_pool = None
+_pg_pool_lock = threading.Lock()
+
+
+def _pg_pool_instance():
+    global _pg_pool
+    if _pg_pool is None:
+        with _pg_pool_lock:
+            if _pg_pool is None:
+                from psycopg_pool import ConnectionPool
+                from psycopg.rows import dict_row
+
+                # Reuse connections across requests (a remote Postgres
+                # handshake per query would dominate page latency) and verify
+                # connections are alive before use, since Neon suspends idle
+                # computes and strands open sockets.
+                _pg_pool = ConnectionPool(
+                    conninfo=database_url(),
+                    min_size=1,
+                    max_size=4,
+                    max_lifetime=600,
+                    max_idle=120,
+                    kwargs={"row_factory": dict_row, "prepare_threshold": None},
+                    check=ConnectionPool.check_connection,
+                    open=True,
+                )
+    return _pg_pool
+
+
+def _close_pg_pool():
+    global _pg_pool
+    if _pg_pool is not None:
+        _pg_pool.close()
+        _pg_pool = None
+
+
+atexit.register(_close_pg_pool)
+
+
 def get_connection():
     url = database_url()
     if url:
-        return _PgConnection(_pg_connect(url))
+        pool = _pg_pool_instance()
+        return _PgConnection(pool.getconn(), pool)
     conn = sqlite3.connect(DATABASE_FILE)
     conn.row_factory = sqlite3.Row
     return conn
 
 
-def _pg_connect(url):
-    import psycopg
-    from psycopg.rows import dict_row
-
-    # Neon's pooler runs PgBouncer in transaction mode, which cannot serve
-    # psycopg's server-side prepared statements.
-    return psycopg.connect(url, row_factory=dict_row, prepare_threshold=None)
-
-
 class _PgConnection:
-    """sqlite3-shaped wrapper over a psycopg connection.
+    """sqlite3-shaped wrapper over a pooled psycopg connection.
 
     Supports exactly the surface this module uses: `with` blocks that commit
-    or roll back and then close, `?` placeholders, executemany, and cursors
-    that fetch rows by column name.
+    or roll back and then return the connection to the pool, `?` placeholders,
+    executemany, and cursors that fetch rows by column name.
     """
 
-    def __init__(self, conn):
+    def __init__(self, conn, pool):
         self._conn = conn
+        self._pool = pool
 
     def execute(self, query, params=()):
         return self._conn.execute(query.replace("?", "%s"), tuple(params))
@@ -63,14 +97,17 @@ class _PgConnection:
         return self._conn.cursor().executemany(query.replace("?", "%s"), rows)
 
     def __enter__(self):
-        self._conn.__enter__()
         return self
 
     def __exit__(self, exc_type, exc, tb):
         try:
-            return self._conn.__exit__(exc_type, exc, tb)
+            if exc_type is None:
+                self._conn.commit()
+            else:
+                self._conn.rollback()
         finally:
-            self._conn.close()
+            self._pool.putconn(self._conn)
+        return False
 
 
 def init_db():
@@ -113,6 +150,7 @@ def init_db():
             """
         )
         _seed_default_budgets(conn)
+        _init_app_users(conn)
 
 
 def _init_postgres():
@@ -142,6 +180,56 @@ def _init_postgres():
             """
         )
         _seed_default_budgets(conn)
+        _init_app_users(conn)
+
+
+def _init_app_users(conn):
+    """Create the credentials table and seed it from env on first boot.
+
+    The env vars remain the bootstrap credential; the Settings page writes
+    changes here so they survive restarts without redeployment.
+    """
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS app_users (
+            username TEXT PRIMARY KEY,
+            password_hash TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    count = conn.execute("SELECT COUNT(*) AS total FROM app_users").fetchone()["total"]
+    username = os.getenv("APP_USERNAME", "").strip()
+    password_hash = os.getenv("APP_PASSWORD_HASH", "").strip()
+    if count == 0 and username and password_hash:
+        conn.execute(
+            "INSERT INTO app_users (username, password_hash, updated_at) VALUES (?, ?, ?)",
+            (username, password_hash, datetime.now().strftime(DATE_FORMAT)),
+        )
+
+
+def get_user_password_hash(username):
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT password_hash FROM app_users WHERE username = ?", (username,)
+        ).fetchone()
+    return row["password_hash"] if row else None
+
+
+def update_user_credentials(new_username, password_hash, previous_username):
+    with get_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO app_users (username, password_hash, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(username) DO UPDATE SET
+                password_hash = excluded.password_hash,
+                updated_at = excluded.updated_at
+            """,
+            (new_username, password_hash, datetime.now().strftime(DATE_FORMAT)),
+        )
+        if new_username != previous_username:
+            conn.execute("DELETE FROM app_users WHERE username = ?", (previous_username,))
 
 
 def _create_indexes(conn):

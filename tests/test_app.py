@@ -1,11 +1,15 @@
+import hashlib
 import os
 import re
 import sys
 from datetime import datetime
 from pathlib import Path
 
+_TEST_DIGEST = hashlib.pbkdf2_hmac("sha256", b"secret", b"testsalt", 120_000).hex()
+os.environ.setdefault(
+    "APP_PASSWORD_HASH", f"pbkdf2_sha256$120000$testsalt${_TEST_DIGEST}"
+)
 os.environ.setdefault("APP_USERNAME", "admin")
-os.environ.setdefault("APP_PASSWORD_HASH", "pbkdf2_sha256$120000$testsalt$0")
 os.environ.setdefault("SECRET_KEY", "test-secret")
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -84,7 +88,6 @@ def test_login_add_edit_delete_expense(tmp_path):
     client = client_with_db(tmp_path)
     login(client)
     expense = add_sample_expense(client)
-
     response = client.get("/")
     assert "Expense Tracker" in response.text
     assert "Welcome back Admin" in response.text
@@ -268,4 +271,128 @@ def test_dynamic_budget_endpoints(tmp_path):
     )
     assert delete_resp.status_code == 302
     assert "Entertainment" not in database.get_budgets()
+
+
+def test_env_credentials_seeded_into_database(tmp_path):
+    client_with_db(tmp_path)
+    assert database.get_user_password_hash("admin") == os.environ["APP_PASSWORD_HASH"]
+
+
+def test_change_credentials_flow(tmp_path):
+    client = client_with_db(tmp_path)
+    login(client)
+
+    settings_page = client.get("/settings")
+    assert "Login credentials" in settings_page.text
+    token = page_csrf(settings_page)
+
+    # Wrong current password is rejected.
+    response = client.post(
+        "/settings/credentials",
+        data={
+            "current_password": "wrong",
+            "new_password": "newsecret123",
+            "confirm_password": "newsecret123",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "wrong_current_password" in response.headers["location"]
+    assert main.valid_login("admin", "secret")
+
+    # Successful change: new password works, old one is rejected, session survives.
+    response = client.post(
+        "/settings/credentials",
+        data={
+            "current_password": "secret",
+            "new_password": "newsecret123",
+            "confirm_password": "newsecret123",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "credentials_updated" in response.headers["location"]
+    assert database.get_user_password_hash("admin") != os.environ["APP_PASSWORD_HASH"]
+    assert main.valid_login("admin", "newsecret123")
+    assert not main.valid_login("admin", "secret")
+    assert client.get("/").status_code == 200  # re-signed session cookie still valid
+
+    # Username change moves the credential row.
+    token = page_csrf(client.get("/settings"))
+    response = client.post(
+        "/settings/credentials",
+        data={
+            "current_password": "newsecret123",
+            "new_username": "sarthak",
+            "new_password": "newsecret123",
+            "confirm_password": "newsecret123",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert main.valid_login("sarthak", "newsecret123")
+    assert database.get_user_password_hash("admin") is None
+
+    # Validation: short password and mismatch are rejected.
+    token = page_csrf(client.get("/settings"))
+    response = client.post(
+        "/settings/credentials",
+        data={
+            "current_password": "newsecret123",
+            "new_password": "short",
+            "confirm_password": "short",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert "weak_password" in response.headers["location"]
+    response = client.post(
+        "/settings/credentials",
+        data={
+            "current_password": "newsecret123",
+            "new_password": "newsecret456",
+            "confirm_password": "different789",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert "password_mismatch" in response.headers["location"]
+
+
+def test_login_lockout_after_repeated_failures(tmp_path):
+    client = client_with_db(tmp_path)
+    main.login_failures.clear()
+    try:
+        token = csrf_from_login_page(client)
+        for _ in range(main.LOGIN_LOCKOUT_THRESHOLD):
+            response = client.post(
+                "/login",
+                data={"username": "admin", "password": "nope", "csrf_token": token},
+                follow_redirects=False,
+            )
+            assert response.status_code == 200
+            assert "Invalid username or password." in response.text
+
+        # Correct credentials are refused while the lockout is active.
+        response = client.post(
+            "/login",
+            data={"username": "admin", "password": "secret", "csrf_token": token},
+            follow_redirects=False,
+        )
+        assert response.status_code == 429
+        assert "Too many failed attempts" in response.text
+    finally:
+        main.login_failures.clear()
+
+
+def test_security_headers_present(tmp_path):
+    client = client_with_db(tmp_path)
+    response = client.get("/login")
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert response.headers["Referrer-Policy"] == "same-origin"
+    assert "noindex" in response.headers["X-Robots-Tag"]
 

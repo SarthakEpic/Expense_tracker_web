@@ -76,4 +76,32 @@
         </div>
     </article>
 </section>
+
+<section class="page-grid">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Security</p>
+                <h2>Login credentials</h2>
+            </div>
+        </div>
+        <form action="/settings/credentials" method="post" class="credential-form" style="display: grid; gap: 14px; max-width: 420px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label>Current password
+                <input type="password" name="current_password" required autocomplete="current-password">
+            </label>
+            <label>New username (leave blank to keep <strong>{{ username }}</strong>)
+                <input type="text" name="new_username" autocomplete="username">
+            </label>
+            <label>New password (minimum 8 characters)
+                <input type="password" name="new_password" required minlength="8" autocomplete="new-password">
+            </label>
+            <label>Confirm new password
+                <input type="password" name="confirm_password" required minlength="8" autocomplete="new-password">
+            </label>
+            <button type="submit">Update credentials</button>
+        </form>
+        <p class="support-copy">Changes are saved to the app database and take effect immediately, no redeploy needed.</p>
+    </article>
+</section>
 {% endblock %}

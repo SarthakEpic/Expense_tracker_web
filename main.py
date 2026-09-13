@@ -2,6 +2,7 @@ import csv
 import hashlib
 import hmac
 import os
+import time
 from calendar import monthrange
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -31,6 +32,9 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 CSRF_COOKIE = "csrf_token"
 SESSION_COOKIE = "session_token"
 SESSION_MAX_AGE = 7 * 24 * 3600  # 7 days
+LOGIN_LOCKOUT_THRESHOLD = 5
+LOGIN_LOCKOUT_MAX_SECONDS = 900
+login_failures = {}
 TRANSACTION_TYPES = {"expense", "income"}
 TRANSACTION_STATUSES = {"completed", "pending"}
 PAGE_SIZE = 10
@@ -99,6 +103,16 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "same-origin"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
 def hash_password(password, salt=None):
     salt = salt or os.urandom(16).hex()
     digest = hashlib.pbkdf2_hmac(
@@ -129,11 +143,47 @@ def verify_password(password, password_hash):
 
 
 def valid_login(username, password):
+    stored_hash = database.get_user_password_hash(username)
+    if stored_hash:
+        # Once seeded, the database credential is the only valid one so that
+        # changed passwords fully invalidate the previous one.
+        return verify_password(password, stored_hash)
+    # Fresh database (init_db seeds it from env on boot): accept the env
+    # bootstrap credential directly.
     if username != USERNAME:
         return False
     if PASSWORD_HASH:
         return verify_password(password, PASSWORD_HASH)
     return bool(LEGACY_PASSWORD and hmac.compare_digest(password, LEGACY_PASSWORD))
+
+
+def login_throttle_key(request, username):
+    ip = request.client.host if request.client else "unknown"
+    return f"{ip}|{username.lower()}"
+
+
+def login_is_locked(key):
+    _, locked_until = login_failures.get(key, (0, 0.0))
+    return time.time() < locked_until
+
+
+def login_lockout_remaining(key):
+    _, locked_until = login_failures.get(key, (0, 0.0))
+    return max(int(locked_until - time.time()), 0)
+
+
+def record_login_failure(key):
+    count, _ = login_failures.get(key, (0, 0.0))
+    count += 1
+    if count >= LOGIN_LOCKOUT_THRESHOLD:
+        backoff = min(30 * (2 ** (count - LOGIN_LOCKOUT_THRESHOLD)), LOGIN_LOCKOUT_MAX_SECONDS)
+    else:
+        backoff = 0
+    login_failures[key] = (count, time.time() + backoff)
+
+
+def clear_login_failures(key):
+    login_failures.pop(key, None)
 
 
 def get_session_user(request):
@@ -144,7 +194,9 @@ def get_session_user(request):
         user = serializer.loads(session_cookie, max_age=SESSION_MAX_AGE)
     except (BadSignature, SignatureExpired):
         return None
-    return user if user == USERNAME else None
+    if user == USERNAME or database.get_user_password_hash(user):
+        return user
+    return None
 
 
 async def get_current_user(request: Request) -> str:
@@ -163,12 +215,17 @@ def get_csrf_token(request):
     return token or token_urlsafe(32)
 
 
-def attach_csrf_cookie(response, token):
+def request_is_secure(request):
+    return request.url.scheme == "https"
+
+
+def attach_csrf_cookie(response, token, secure=False):
     response.set_cookie(
         key=CSRF_COOKIE,
         value=token,
         httponly=True,
         samesite="lax",
+        secure=secure,
     )
 
 
@@ -207,6 +264,11 @@ def get_messages(key):
         "budget_deleted": "Budget category removed.",
         "budget_draft": "Budget creation is staged as a future workflow in this prototype.",
         "export_mock": "CSV is live. Excel and PDF exports are staged as premium report actions.",
+        "credentials_updated": "Login credentials updated.",
+        "wrong_current_password": "Current password is incorrect.",
+        "weak_password": "New password must be at least 8 characters.",
+        "password_mismatch": "New passwords do not match.",
+        "login_throttled": "Too many failed attempts. Please wait before trying again.",
     }
     return messages.get(key, "")
 
@@ -565,6 +627,7 @@ def build_shared_context(request, active_page, expenses, selected_expenses=None)
         "message": get_messages(request.query_params.get("msg")),
         "csrf_token": token,
         "user_name": user_name,
+        "username": session_user,
         "user_email": f"{session_user}@example.com" if "@" not in session_user else session_user,
         "user_initial": user_name[:1].upper(),
         "categories": sorted(set(database.list_categories()) | set(database.get_budgets())),
@@ -583,7 +646,7 @@ def build_shared_context(request, active_page, expenses, selected_expenses=None)
 
 def render_page(request, template_name, context):
     response = templates.TemplateResponse(request, template_name, context)
-    attach_csrf_cookie(response, context["csrf_token"])
+    attach_csrf_cookie(response, context["csrf_token"], secure=request_is_secure(request))
     return response
 
 
@@ -636,7 +699,7 @@ async def login_page(request: Request):
         "login.html",
         {"error": "", "csrf_token": token},
     )
-    attach_csrf_cookie(response, token)
+    attach_csrf_cookie(response, token, secure=request_is_secure(request))
     return response
 
 
@@ -650,7 +713,26 @@ async def login(
     if not validate_csrf(request, csrf_token):
         return RedirectResponse(url="/login", status_code=302)
 
+    throttle_key = login_throttle_key(request, username)
+    if login_is_locked(throttle_key):
+        token = get_csrf_token(request)
+        response = templates.TemplateResponse(
+            request,
+            "login.html",
+            {
+                "error": (
+                    "Too many failed attempts. "
+                    f"Try again in {login_lockout_remaining(throttle_key)} seconds."
+                ),
+                "csrf_token": token,
+            },
+            status_code=429,
+        )
+        attach_csrf_cookie(response, token, secure=request_is_secure(request))
+        return response
+
     if valid_login(username, password):
+        clear_login_failures(throttle_key)
         response = RedirectResponse(url="/", status_code=302)
         response.set_cookie(
             key=SESSION_COOKIE,
@@ -658,10 +740,11 @@ async def login(
             httponly=True,
             samesite="lax",
             max_age=SESSION_MAX_AGE,
-            secure=request.url.scheme == "https",
+            secure=request_is_secure(request),
         )
         return response
 
+    record_login_failure(throttle_key)
     token = get_csrf_token(request)
     response = templates.TemplateResponse(
         request,
@@ -671,7 +754,7 @@ async def login(
             "csrf_token": token,
         },
     )
-    attach_csrf_cookie(response, token)
+    attach_csrf_cookie(response, token, secure=request_is_secure(request))
     return response
 
 
@@ -807,6 +890,42 @@ async def settings_page(request: Request, user: str = Depends(get_current_user))
     return render_page(request, "settings.html", context)
 
 
+@app.post("/settings/credentials")
+async def update_credentials(
+    request: Request,
+    current_password: str = Form(...),
+    new_username: str = Form(""),
+    new_password: str = Form(""),
+    confirm_password: str = Form(""),
+    csrf_token: str = Form(...),
+    user: str = Depends(get_current_user),
+):
+    if not validate_csrf(request, csrf_token):
+        return redirect_with_message("invalid_csrf", "/settings")
+    if not valid_login(user, current_password):
+        return redirect_with_message("wrong_current_password", "/settings")
+
+    new_username = new_username.strip() or user
+    if len(new_password) < 8:
+        return redirect_with_message("weak_password", "/settings")
+    if new_password != confirm_password:
+        return redirect_with_message("password_mismatch", "/settings")
+
+    database.update_user_credentials(new_username, hash_password(new_password), user)
+    login_failures.clear()
+
+    response = redirect_with_message("credentials_updated", "/settings")
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=serializer.dumps(new_username),
+        httponly=True,
+        samesite="lax",
+        max_age=SESSION_MAX_AGE,
+        secure=request_is_secure(request),
+    )
+    return response
+
+
 @app.get("/coming-soon", response_class=HTMLResponse)
 async def coming_soon_page(request: Request, user: str = Depends(get_current_user)):
     all_expenses = database.list_expenses()
@@ -884,7 +1003,7 @@ async def edit_expense_form(request: Request, expense_id: str, user: str = Depen
             "csrf_token": token,
         },
     )
-    attach_csrf_cookie(response, token)
+    attach_csrf_cookie(response, token, secure=request_is_secure(request))
     return response
 
 

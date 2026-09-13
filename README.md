@@ -40,11 +40,14 @@ A self-hosted personal finance and expense tracking dashboard built with **FastA
 - Filter-aware CSV export with dynamic timestamped filenames (`expenses-YYYYMMDD-HHMMSS.csv`).
 
 ### 🛡️ Security & Privacy
-- **Zero Cloud Tracking:** All financial data remains in a local, single-file SQLite database on your machine.
+- **Zero Cloud Tracking:** All financial data remains in your own database (local SQLite file, or your own Neon Postgres in the cloud).
 - **PBKDF2 Password Hashing:** Credentials hashed with `hashlib.pbkdf2_hmac` (`sha256`, 120,000 iterations, random salt).
+- **In-App Credential Management:** Change username and password from **Settings → Login credentials** — stored in the database, effective immediately, no redeploy.
+- **Brute-Force Lockout:** Repeated failed logins trigger an escalating time lockout per IP + username.
 - **Cryptographically Signed Sessions:** HTTP-only cookies signed with `URLSafeTimedSerializer` and strict 7-day expiration.
 - **CSRF Defense:** Double-submit cookie verification across all mutating form requests.
 - **Hardened Navigation:** Open-redirect defense via server-side `Referer` host validation.
+- **Security Headers:** `nosniff`, clickjacking protection, referrer policy, and `noindex` on every response.
 
 ---
 

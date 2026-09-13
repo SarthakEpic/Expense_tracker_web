@@ -22,6 +22,7 @@ def _flush_tables():
     with database.get_connection() as conn:
         conn.execute("DELETE FROM expenses")
         conn.execute("DELETE FROM budgets")
+        conn.execute("DELETE FROM app_users")
 
 
 @pytest.fixture(autouse=True)
