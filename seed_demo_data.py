@@ -19,6 +19,7 @@ Run:
 
 from __future__ import annotations
 
+import os
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -26,6 +27,7 @@ from pathlib import Path
 import database
 
 DB_PATH = Path("expenses.db")
+owner = None
 
 
 def backup_existing_db() -> Path | None:
@@ -41,6 +43,7 @@ def backup_existing_db() -> Path | None:
 def add(days_ago: int, amount: float, category: str, description: str, ttype: str, status: str):
     created_at = (datetime.now() - timedelta(days=days_ago)).strftime(database.DATE_FORMAT)
     database.add_expense(
+        owner["id"],
         amount=amount,
         category=category,
         description=description,
@@ -55,6 +58,14 @@ def seed():
     if DB_PATH.exists():
         DB_PATH.unlink()
     database.init_db()
+
+    global owner
+    owner = database.get_user_by_username(os.environ.get("APP_USERNAME", "admin"))
+    if owner is None:
+        raise SystemExit(
+            "No user found. Set APP_USERNAME (and APP_PASSWORD_HASH) or create "
+            "an account first, then re-run the seeder."
+        )
 
     rows = [
         # Current month — strong dashboard signals
