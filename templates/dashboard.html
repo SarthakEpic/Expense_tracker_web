@@ -5,50 +5,50 @@
     <article class="hero-card">
         <div class="hero-copy">
             <p>Current Balance</p>
-            <strong>{% if balance < 0 %}-{% endif %}₹{{ "%.0f"|format(balance_abs) }}</strong>
-            <span class="{% if savings_change >= 0 %}trend-up{% else %}trend-down{% endif %}">
+            <strong>{% if balance < 0 %}-{% endif %}₹{{ balance_abs|inr }}</strong>
+            <span class="hero-trend {% if savings_change >= 0 %}trend-up{% else %}trend-down{% endif %}">
                 {% if savings_change >= 0 %}↑{% else %}↓{% endif %} {{ "%.1f"|format(savings_change|abs) }}% net momentum
             </span>
         </div>
         <div class="hero-mini">
             <div>
                 <span>Pending</span>
-                <strong>₹{{ "%.0f"|format(pending_total) }}</strong>
+                <strong>₹{{ pending_total|inr }}</strong>
             </div>
             <div>
                 <span>Average expense</span>
-                <strong>₹{{ "%.0f"|format(average_expense) }}</strong>
+                <strong>₹{{ average_expense|inr }}</strong>
             </div>
         </div>
     </article>
 
     <div class="kpi-grid">
         <article class="kpi-card">
-            <span class="card-icon income"></span>
+            <span class="card-icon income"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <p>Income</p>
-            <strong>₹{{ "%.0f"|format(total_income) }}</strong>
+            <strong>₹{{ total_income|inr }}</strong>
             <span class="{% if income_change >= 0 %}trend-up{% else %}trend-down{% endif %}">
                 {% if income_change >= 0 %}↑{% else %}↓{% endif %} {{ "%.1f"|format(income_change|abs) }}%
             </span>
         </article>
         <article class="kpi-card">
-            <span class="card-icon expense"></span>
+            <span class="card-icon expense"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 9v8H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <p>Expenses</p>
-            <strong>₹{{ "%.0f"|format(total_spent) }}</strong>
+            <strong>₹{{ total_spent|inr }}</strong>
             <span class="{% if expense_change <= 0 %}trend-up{% else %}trend-down{% endif %}">
                 {% if expense_change <= 0 %}↓{% else %}↑{% endif %} {{ "%.1f"|format(expense_change|abs) }}%
             </span>
         </article>
         <article class="kpi-card">
-            <span class="card-icon savings"></span>
+            <span class="card-icon savings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h13a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3H4zM4 7v10M16 12h.01" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <p>Savings</p>
-            <strong>{% if total_savings < 0 %}-{% endif %}₹{{ "%.0f"|format(total_savings|abs) }}</strong>
+            <strong>{% if total_savings < 0 %}-{% endif %}₹{{ total_savings|abs|inr }}</strong>
             <span class="{% if savings_change >= 0 %}trend-up{% else %}trend-down{% endif %}">
                 {% if savings_change >= 0 %}↑{% else %}↓{% endif %} {{ "%.1f"|format(savings_change|abs) }}%
             </span>
         </article>
         <article class="kpi-card">
-            <span class="card-icon budget"></span>
+            <span class="card-icon budget"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19a9 9 0 1 1 14 0M12 13l4-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <p>Budget Usage</p>
             <strong>{{ "%.0f"|format(budget_usage) }}%</strong>
             <span class="{% if budget_usage_change <= 0 %}trend-up{% else %}trend-down{% endif %}">
@@ -121,7 +121,7 @@
                 <div class="budget-head">
                     <div>
                         <strong>{{ budget.category }}</strong>
-                        <span>₹{{ "%.0f"|format(budget.spent) }} / ₹{{ "%.0f"|format(budget.limit) }}</span>
+                        <span>₹{{ budget.spent|inr }} / ₹{{ budget.limit|inr }}</span>
                     </div>
                     <b class="status-chip {{ budget.status|lower|replace(' ', '-') }}">{{ budget.status }}</b>
                 </div>
@@ -143,15 +143,15 @@
         </div>
         <div class="donut-layout">
             <div class="donut-chart" style="--donut-segments: {{ donut_gradient }}">
-                <strong>₹{{ "%.0f"|format(total_spent) }}</strong>
-                <span>Completed expenses</span>
+                <strong>₹{{ total_spent|inr }}</strong>
+                <span>completed spend</span>
             </div>
             <div class="donut-legend">
                 {% for category, total in category_totals %}
                 <div class="legend-row">
                     <span class="legend-dot dot-{{ loop.index }}"></span>
                     <span>{{ category }}</span>
-                    <strong>₹{{ "%.0f"|format(total) }}</strong>
+                    <strong>₹{{ total|inr }}</strong>
                 </div>
                 {% else %}
                 <div class="empty-panel inline-empty">No completed expense categories yet.</div>

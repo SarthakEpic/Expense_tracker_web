@@ -186,7 +186,19 @@ button { cursor: pointer; }
 .avatar.large { width: 58px; height: 58px; font-size: 20px; }
 .sidebar-profile strong { color: #ffffff; font-size: 14px; }
 .sidebar-profile small { color: #94a3b8; font-size: 12px; }
-.logout-link { margin-left: auto; color: #cbd5e1; font-size: 12px; }
+.logout-link {
+    margin-left: auto;
+    padding: 8px 14px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 999px;
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.logout-link:hover { background: rgba(148, 163, 184, 0.14); border-color: rgba(148, 163, 184, 0.45); }
 
 .app-main { padding: 28px; }
 
@@ -389,6 +401,7 @@ button { cursor: pointer; }
 }
 
 .budget-head { justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.budget-foot { gap: 10px; flex-wrap: wrap; }
 
 .progress-track, .stack-bar {
     position: relative;
@@ -415,6 +428,7 @@ button { cursor: pointer; }
     border-radius: 999px;
     font-size: 12px;
     font-weight: 700;
+    white-space: nowrap;
 }
 
 .safe, .status-completed, .type-pill.income { color: #047857; background: rgba(16, 185, 129, 0.16); }
@@ -435,12 +449,12 @@ button { cursor: pointer; }
     height: 172px;
     border-radius: 50%;
     background:
-        radial-gradient(circle at center, var(--surface) 0 56px, transparent 57px),
+        radial-gradient(circle at center, var(--surface) 0 63px, transparent 64px),
         conic-gradient(var(--donut-segments));
 }
 
-.donut-chart strong { font-size: 1.8rem; }
-.donut-chart span { margin-top: 6px; color: var(--muted); font-size: 12px; }
+.donut-chart strong { font-size: 1.45rem; line-height: 1.1; }
+.donut-chart span { margin: 4px 12px 0; color: var(--muted); font-size: 11px; text-align: center; }
 .donut-legend { display: grid; gap: 14px; }
 .legend-row { gap: 10px; justify-content: space-between; }
 .legend-row > span:nth-child(2) { flex: 1 1 auto; color: var(--muted); }
@@ -482,6 +496,7 @@ input, select {
 
 .filter-actions { gap: 12px; align-self: end; }
 .mobile-cards { display: none; }
+.action-row { gap: 14px; }
 .action-row form { margin: 0; }
 .transaction-card p { margin-bottom: 14px; }
 .card-meta { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -511,8 +526,8 @@ input, select {
 
 .bar-track i {
     position: absolute;
-    right: 18%;
-    left: 18%;
+    right: 22%;
+    left: 22%;
     bottom: 0;
     border-radius: 999px 999px 10px 10px;
 }
@@ -525,14 +540,17 @@ input, select {
 
 .cashflow-list { display: grid; gap: 16px; }
 .cashflow-row { gap: 14px; }
-.cashflow-row > span:first-child, .cashflow-row > strong:last-child { width: 70px; flex: 0 0 auto; }
+.cashflow-row > span:first-child { width: 48px; flex: 0 0 auto; }
+.cashflow-row > strong:last-child { width: 88px; flex: 0 0 auto; text-align: right; white-space: nowrap; }
 .cashflow-bars { display: grid; flex: 1 1 auto; gap: 6px; }
 .cashflow-bars i { display: block; height: 8px; border-radius: 999px; }
 
-.stat-strip, .report-grid, .budget-grid, .coming-grid {
+.report-grid, .budget-grid, .coming-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     margin-bottom: 22px;
 }
+
+.stat-strip { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 22px; }
 
 .mini-stat span { display: block; margin-bottom: 10px; }
 .stack-row { display: grid; gap: 12px; }
@@ -645,7 +663,8 @@ body.drawer-open .drawer-backdrop, body.sidebar-open .mobile-sidebar-backdrop { 
     padding: 24px;
 }
 
-.auth-card { width: min(760px, 100%); padding: 30px; }
+.auth-card { width: min(480px, 100%); padding: 34px; }
+.auth-card .auth-brand { display: inline-grid; margin-bottom: 16px; }
 .auth-card h1 { margin: 0 0 8px; font-size: 2rem; }
 .auth-card .subtitle { margin-bottom: 22px; }
 .auth-card button, .auth-card .secondary-button, .auth-card .primary-button { min-width: 132px; }
@@ -696,4 +715,85 @@ body.drawer-open .drawer-backdrop, body.sidebar-open .mobile-sidebar-backdrop { 
     .pagination { flex-direction: column; align-items: stretch; }
     .cashflow-row { display: grid; grid-template-columns: 1fr; }
     .cashflow-row > span:first-child, .cashflow-row > strong:last-child { width: auto; }
+}
+
+/* ---------------------------------------------------------------------------
+   Icons, hero trend, settings forms, user management
+--------------------------------------------------------------------------- */
+
+.card-icon svg { width: 22px; height: 22px; }
+.card-icon { color: var(--muted); }
+.card-icon.income { color: var(--success); }
+.card-icon.expense { color: var(--danger); }
+.card-icon.savings { color: var(--primary); }
+.card-icon.budget { color: var(--warning); }
+
+.hero-trend {
+    align-self: flex-start;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    backdrop-filter: blur(4px);
+}
+
+.settings-form { display: grid; gap: 16px; max-width: 460px; }
+.form-actions { display: flex; gap: 12px; margin-top: 4px; }
+
+.small-button { min-height: 40px; padding: 0 14px; border-radius: 12px; font-size: 13px; }
+
+.danger-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 12px;
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--danger);
+    font-weight: 600;
+    transition: background-color 0.18s ease;
+}
+
+.danger-button:hover { background: rgba(239, 68, 68, 0.16); }
+
+.user-list { display: grid; gap: 14px; }
+
+.user-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface-muted);
+}
+
+.user-row-main { display: flex; align-items: center; gap: 14px; }
+.user-row-main .avatar { width: 40px; height: 40px; border-radius: 12px; font-size: 15px; }
+.user-row-main strong { display: flex; align-items: center; gap: 8px; }
+.user-row-main p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.user-row-main .status-chip { min-height: 22px; padding: 0 8px; font-size: 10px; }
+
+.user-row-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.inline-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.inline-form input { width: 150px; min-height: 40px; }
+
+.add-user-block {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+}
+
+.primary-button:hover { box-shadow: 0 18px 30px rgba(37, 99, 235, 0.26); transform: translateY(-1px); }
+.secondary-button:hover, .theme-option:hover { border-color: rgba(37, 99, 235, 0.35); color: var(--primary); }
+.primary-button, .secondary-button, .theme-option, .icon-button, .danger-button { transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease; }
+
+:focus-visible { outline: 3px solid rgba(37, 99, 235, 0.4); outline-offset: 2px; border-radius: 6px; }
+
+@media (max-width: 720px) {
+    .user-row { flex-direction: column; align-items: stretch; }
+    .inline-form input { flex: 1 1 120px; width: auto; }
+    .form-actions .primary-button, .form-actions .secondary-button { flex: 1 1 0; }
 }

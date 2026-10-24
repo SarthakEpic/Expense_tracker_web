@@ -4,15 +4,15 @@
 <section class="stat-strip">
     <article class="mini-stat">
         <span>Projected spending</span>
-        <strong>₹{{ "%.0f"|format(projected_spending) }}</strong>
+        <strong>₹{{ projected_spending|inr }}</strong>
     </article>
     <article class="mini-stat">
         <span>Average expense</span>
-        <strong>₹{{ "%.0f"|format(average_expense) }}</strong>
+        <strong>₹{{ average_expense|inr }}</strong>
     </article>
     <article class="mini-stat">
         <span>Pending pipeline</span>
-        <strong>₹{{ "%.0f"|format(pending_total) }}</strong>
+        <strong>₹{{ pending_total|inr }}</strong>
     </article>
 </section>
 
@@ -28,7 +28,7 @@
         <div class="bar-chart">
             {% for item in monthly_spending %}
             <div class="bar-column">
-                <span class="bar-value">₹{{ "%.0f"|format(item.actual + item.projection) }}</span>
+                <span class="bar-value">₹{{ (item.actual + item.projection)|inr }}</span>
                 <div class="bar-track">
                     <i class="actual-bar" style="height: {{ (item.actual / max_monthly_total * 100)|round(1) if max_monthly_total else 0 }}%"></i>
                     {% if item.projection %}
@@ -79,7 +79,7 @@
             <div class="stack-row">
                 <div>
                     <strong>{{ category }}</strong>
-                    <span>₹{{ "%.0f"|format(total) }}</span>
+                    <span>₹{{ total|inr }}</span>
                 </div>
                 <div class="stack-bar"><span style="width: {{ (total / total_spent * 100)|round(1) if total_spent else 0 }}%"></span></div>
             </div>
@@ -105,7 +105,7 @@
                     <i class="expense-bar" style="width: {{ (item.expenses / max_cashflow * 100)|round(1) if max_cashflow else 0 }}%"></i>
                 </div>
                 <strong class="{% if item.net < 0 %}amount-negative{% else %}amount-positive{% endif %}">
-                    {% if item.net < 0 %}-{% else %}+{% endif %}₹{{ "%.0f"|format(item.net_abs) }}
+                    {% if item.net < 0 %}-{% else %}+{% endif %}₹{{ item.net_abs|inr }}
                 </strong>
             </div>
             {% else %}

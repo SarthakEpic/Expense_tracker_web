@@ -322,6 +322,29 @@ def datetime_local_value(value):
     return datetime.strptime(value, database.DATE_FORMAT).strftime("%Y-%m-%dT%H:%M")
 
 
+def inr(value):
+    """Format a number with Indian digit grouping: 187730 -> 1,87,730."""
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    negative = amount < 0
+    whole = str(int(round(abs(amount))))
+    if len(whole) > 3:
+        head, tail = whole[:-3], whole[-3:]
+        parts = []
+        while len(head) > 2:
+            parts.insert(0, head[-2:])
+            head = head[:-2]
+        if head:
+            parts.insert(0, head)
+        whole = ",".join(parts + [tail])
+    return ("-" if negative else "") + whole
+
+
+templates.env.filters["inr"] = inr
+
+
 def percent_change(current, previous):
     if previous == 0:
         return 100.0 if current else 0.0
@@ -395,7 +418,7 @@ def build_insights(category_totals, budgets, expenses):
         insights.append(
             {
                 "title": "Top category",
-                "copy": f"{top_category} leads your completed spending at INR {top_amount:.0f}.",
+                "copy": f"{top_category} leads your completed spending at INR {inr(top_amount)}.",
             }
         )
     if expenses:
@@ -596,10 +619,14 @@ def get_navigation(active_page):
 
 
 def page_meta(page, user_name):
+    hour = datetime.now().hour
+    greeting = (
+        "Good Morning" if hour < 12 else "Good Afternoon" if hour < 17 else "Good Evening"
+    )
     meta = {
         "dashboard": {
             "eyebrow": "Financial overview",
-            "title": "Good Evening",
+            "title": greeting,
             "subtitle": f"Welcome back {user_name}. Here is your financial overview.",
         },
         "transactions": {

@@ -4,17 +4,17 @@
 <section class="report-grid">
     <article class="report-card">
         <p>Monthly Report</p>
-        <strong>{% if monthly_report_total < 0 %}-{% endif %}₹{{ "%.0f"|format(monthly_report_total_abs) }}</strong>
+        <strong>{% if monthly_report_total < 0 %}-{% endif %}₹{{ monthly_report_total_abs|inr }}</strong>
         <span>Current net position</span>
     </article>
     <article class="report-card">
         <p>Quarterly Report</p>
-        <strong>{% if quarterly_report_total < 0 %}-{% endif %}₹{{ "%.0f"|format(quarterly_report_total_abs) }}</strong>
+        <strong>{% if quarterly_report_total < 0 %}-{% endif %}₹{{ quarterly_report_total_abs|inr }}</strong>
         <span>Last three periods in the trend window</span>
     </article>
     <article class="report-card">
         <p>Yearly Report</p>
-        <strong>{% if yearly_report_total < 0 %}-{% endif %}₹{{ "%.0f"|format(yearly_report_total_abs) }}</strong>
+        <strong>{% if yearly_report_total < 0 %}-{% endif %}₹{{ yearly_report_total_abs|inr }}</strong>
         <span>Rolling total across the visible year</span>
     </article>
     <article class="report-card">

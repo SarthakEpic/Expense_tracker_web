@@ -33,7 +33,7 @@
             <div class="budget-head">
                 <div>
                     <p>{{ budget.category }} Budget</p>
-                    <strong>₹{{ "%.0f"|format(budget.spent) }} <span>/ ₹{{ "%.0f"|format(budget.limit) }}</span></strong>
+                    <strong>₹{{ budget.spent|inr }} <span>/ ₹{{ budget.limit|inr }}</span></strong>
                 </div>
                 <div style="text-align: right;">
                     <b class="status-chip {{ budget.status|lower|replace(' ', '-') }}">{{ budget.status }}</b>
@@ -48,7 +48,7 @@
             </div>
             <div class="budget-foot">
                 <span>{{ "%.0f"|format(budget.actual_usage) }}% used</span>
-                <span>₹{{ "%.0f"|format(budget.remaining) }} remaining</span>
+                <span>₹{{ budget.remaining|inr }} remaining</span>
             </div>
         </article>
         {% endfor %}
