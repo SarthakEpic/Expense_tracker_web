@@ -544,6 +544,23 @@ def test_login_failures_are_pruned_after_ttl():
         main.login_failures.clear()
 
 
+def test_404_renders_friendly_page(tmp_path):
+    client = client_with_db(tmp_path)
+
+    response = client.get("/no-such-page")
+    assert response.status_code == 404
+    assert "Page not found" in response.text
+    assert "/no-such-page" in response.text
+
+    # The 401 redirect for HTML requests still works.
+    response = client.get("/", headers={"accept": "text/html"}, follow_redirects=False)
+    assert response.status_code == 302
+    assert response.headers["location"] == "/login"
+    # Non-HTML 401s stay a plain 401 instead of redirecting.
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 401
+
+
 def test_security_headers_present(tmp_path):
     client = client_with_db(tmp_path)
     response = client.get("/login")

@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import database
 
@@ -90,13 +91,23 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    """Redirect to login on 401 for HTML requests; otherwise return JSON error."""
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Redirect to login on 401 for HTML requests, show a friendly 404 page,
+    and fall back to plain text for every other API-style error. Registering
+    for the Starlette base class covers FastAPI's HTTPException subclass too,
+    so one handler serves both."""
     if exc.status_code == status.HTTP_401_UNAUTHORIZED:
         accept = request.headers.get("accept", "")
         if "text/html" in accept:
             return RedirectResponse(url="/login", status_code=302)
+    if exc.status_code == status.HTTP_404_NOT_FOUND:
+        return templates.TemplateResponse(
+            request,
+            "not-found.html",
+            {"requested_path": request.url.path},
+            status_code=404,
+        )
     return Response(
         content=exc.detail,
         status_code=exc.status_code,
