@@ -570,6 +570,17 @@ def test_security_headers_present(tmp_path):
     assert "noindex" in response.headers["X-Robots-Tag"]
 
 
+def test_app_pages_send_no_store_but_static_can_cache(tmp_path):
+    client = client_with_db(tmp_path)
+    login(client)
+
+    assert client.get("/").headers["cache-control"] == "no-store"
+    assert client.get("/login").headers["cache-control"] == "no-store"
+    assert client.get("/transactions").headers["cache-control"] == "no-store"
+    # Static assets stay cacheable.
+    assert client.get("/static/style.css").headers.get("cache-control") != "no-store"
+
+
 def test_multi_user_data_isolation(tmp_path):
     client = client_with_db(tmp_path)
     login(client)
