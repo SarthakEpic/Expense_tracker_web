@@ -487,6 +487,42 @@ def test_login_lockout_after_repeated_failures(tmp_path):
         main.login_failures.clear()
 
 
+def test_transaction_page_shows_filtered_totals(tmp_path):
+    client = client_with_db(tmp_path)
+    login(client)
+
+    def add(amount, category, transaction_type, day):
+        token = page_csrf(client.get("/"))
+        response = client.post(
+            "/add",
+            data={
+                "amount": amount,
+                "category": category,
+                "description": f"{category} entry",
+                "transaction_type": transaction_type,
+                "status": "completed",
+                "transaction_date": f"2026-06-{day}T10:00",
+                "csrf_token": token,
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 302
+
+    add("500", "Salary", "income", 11)
+    add("120", "Food", "expense", 12)
+
+    page = client.get("/transactions")
+    assert "In ₹500" in page.text
+    assert "Out ₹120" in page.text
+    assert "Net ₹380" in page.text
+
+    # Totals respect the active filter: only the Food expense matches.
+    page = client.get("/transactions?category=Food")
+    assert "In ₹0" in page.text
+    assert "Out ₹120" in page.text
+    assert "-₹120" in page.text
+
+
 def test_pagination_links_encode_special_characters(tmp_path):
     client = client_with_db(tmp_path)
     login(client)

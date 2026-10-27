@@ -63,6 +63,11 @@
             <p class="eyebrow">Ledger</p>
             <h2>{{ total_transactions }} transactions</h2>
         </div>
+        <div class="ledger-totals">
+            <span class="panel-tag">In ₹{{ filtered_income_total|inr }}</span>
+            <span class="panel-tag">Out ₹{{ filtered_expense_total|inr }}</span>
+            <span class="panel-tag">Net {% if filtered_net_total < 0 %}-{% endif %}₹{{ filtered_net_total|abs|inr }}</span>
+        </div>
         <button type="button" class="primary-button subtle" data-open-drawer>Add transaction</button>
     </div>
 

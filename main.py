@@ -1007,6 +1007,12 @@ async def transactions_page(
         date_to=date_to,
     )
     ordered = parse_transaction_sort(filtered, sort)
+    filtered_income_total = sum(
+        item["amount"] for item in ordered if item["transaction_type"] == "income"
+    )
+    filtered_expense_total = sum(
+        item["amount"] for item in ordered if item["transaction_type"] == "expense"
+    )
     page = max(page, 1)
     page_count = max((len(ordered) + PAGE_SIZE - 1) // PAGE_SIZE, 1)
     page = min(page, page_count)
@@ -1037,6 +1043,9 @@ async def transactions_page(
             "page_number": page,
             "page_count": page_count,
             "total_transactions": len(ordered),
+            "filtered_income_total": filtered_income_total,
+            "filtered_expense_total": filtered_expense_total,
+            "filtered_net_total": filtered_income_total - filtered_expense_total,
             "page_url": lambda page_number: transaction_list_url(filters, page_number),
         }
     )

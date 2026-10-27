@@ -798,6 +798,8 @@ body.drawer-open .drawer-backdrop, body.sidebar-open .mobile-sidebar-backdrop { 
     .form-actions .primary-button, .form-actions .secondary-button { flex: 1 1 0; }
 }
 
+.ledger-totals { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
 .not-found {
     min-height: 100vh;
     display: grid;
