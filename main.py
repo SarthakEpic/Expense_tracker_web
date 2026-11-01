@@ -262,7 +262,8 @@ def safe_redirect_url(request: Request, default: str = "/") -> str:
 
 
 def redirect_with_message(message, target="/"):
-    return RedirectResponse(url=f"{target}?msg={message}", status_code=302)
+    separator = "&" if "?" in target else "?"
+    return RedirectResponse(url=f"{target}{separator}msg={message}", status_code=302)
 
 
 def get_messages(key):
@@ -1159,7 +1160,7 @@ async def add_expense(
         created_at=created_at,
     )
     target = safe_redirect_url(request, default="/")
-    return RedirectResponse(url=target, status_code=302)
+    return redirect_with_message("added", target)
 
 
 @app.post("/delete/{expense_id}")
@@ -1169,7 +1170,7 @@ async def delete_expense(request: Request, expense_id: str, csrf_token: str = Fo
 
     database.delete_expense(user["id"], expense_id)
     target = safe_redirect_url(request, default="/transactions")
-    return RedirectResponse(url=target, status_code=302)
+    return redirect_with_message("deleted", target)
 
 
 @app.get("/edit/{expense_id}", response_class=HTMLResponse)

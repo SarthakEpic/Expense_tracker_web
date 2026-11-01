@@ -238,7 +238,42 @@ def test_open_redirect_blocked(tmp_path):
         follow_redirects=False,
     )
     assert response.status_code == 302
-    assert response.headers["location"] == "/"
+    assert response.headers["location"] == "/?msg=added"
+
+
+def test_add_and_delete_show_flash_messages(tmp_path):
+    client = client_with_db(tmp_path)
+    login(client)
+
+    home = client.get("/")
+    token = page_csrf(home)
+    response = client.post(
+        "/add",
+        data={
+            "amount": "75.00",
+            "category": "Food",
+            "description": "Dinner",
+            "transaction_type": "expense",
+            "status": "completed",
+            "transaction_date": "2026-06-10T19:00",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "msg=added" in response.headers["location"]
+    assert "Transaction added successfully." in client.get(response.headers["location"]).text
+
+    expense = database.list_expenses(admin_id())[0]
+    token = page_csrf(client.get("/transactions"))
+    response = client.post(
+        f"/delete/{expense['id']}",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "msg=deleted" in response.headers["location"]
+    assert "Transaction deleted." in client.get(response.headers["location"]).text
 
 
 def test_percent_change_with_negative_previous():
