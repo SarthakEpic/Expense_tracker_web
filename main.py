@@ -1277,7 +1277,9 @@ async def export_expenses(
 
     filename = f"expenses-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv"
     headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-    return Response(output.getvalue(), media_type="text/csv", headers=headers)
+    # Lead with a UTF-8 BOM so Excel detects the encoding and renders
+    # ₹ symbols and accented text correctly instead of mojibake.
+    return Response("\ufeff" + output.getvalue(), media_type="text/csv; charset=utf-8", headers=headers)
 
 
 @app.post("/budgets/set")

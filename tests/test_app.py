@@ -160,9 +160,11 @@ def test_filters_and_export(tmp_path):
     export = client.get("/export?category=Food")
     assert export.status_code == 200
     assert export.headers["content-type"].startswith("text/csv")
+    assert "charset=utf-8" in export.headers["content-type"]
     assert "Food" in export.text
     assert "Bills" not in export.text
-    assert export.text.startswith("type,status,amount,category,description,date")
+    # UTF-8 BOM prefix so Excel detects the encoding.
+    assert export.text.startswith("\ufefftype,status,amount,category,description,date")
 
 
 def test_income_pending_and_projection_are_real_calculations(tmp_path):
