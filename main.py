@@ -856,7 +856,7 @@ async def register(
         error = "Password must be at least 8 characters."
     elif password != confirm_password:
         error = "Passwords do not match."
-    elif database.get_user_by_username(username):
+    elif database.find_user_id_by_username_any_case(username) is not None:
         error = "That username is already taken."
 
     if error:
@@ -1039,7 +1039,8 @@ async def update_credentials(
         return redirect_with_message("weak_password", "/settings")
     if new_password != confirm_password:
         return redirect_with_message("password_mismatch", "/settings")
-    if new_username != user["username"] and database.get_user_by_username(new_username):
+    name_owner = database.find_user_id_by_username_any_case(new_username)
+    if name_owner is not None and name_owner != user["id"]:
         return redirect_with_message("username_taken", "/settings")
 
     database.update_user_credentials(user["id"], new_username, hash_password(new_password))
@@ -1067,7 +1068,7 @@ async def admin_add_user(
         return redirect_with_message("weak_password", "/settings")
     if password != confirm_password:
         return redirect_with_message("password_mismatch", "/settings")
-    if database.get_user_by_username(username):
+    if database.find_user_id_by_username_any_case(username) is not None:
         return redirect_with_message("username_taken", "/settings")
 
     database.create_user(username, hash_password(password), is_admin=False)

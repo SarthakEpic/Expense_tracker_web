@@ -441,6 +441,20 @@ def get_user_by_username(username):
     return row
 
 
+def find_user_id_by_username_any_case(username):
+    """Case-insensitive username lookup; returns the matching id or None.
+
+    Uniqueness checks use this so "Admin" and "admin" cannot exist as
+    two separate accounts.
+    """
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT id FROM app_users WHERE LOWER(username) = LOWER(?)",
+            (username,),
+        ).fetchone()
+    return row["id"] if row else None
+
+
 def get_user_by_id(user_id):
     with get_connection() as conn:
         row = conn.execute(

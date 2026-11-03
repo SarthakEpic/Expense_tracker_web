@@ -404,6 +404,55 @@ def test_change_credentials_flow(tmp_path):
     assert "password_mismatch" in response.headers["location"]
 
 
+def test_username_uniqueness_is_case_insensitive(tmp_path):
+    client = client_with_db(tmp_path)
+    login(client)
+
+    token = page_csrf(client.get("/settings"))
+    response = client.post(
+        "/admin/users/add",
+        data={
+            "username": "priya",
+            "password": "priyapass123",
+            "confirm_password": "priyapass123",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert "user_created" in response.headers["location"]
+
+    # The same name in a different case is still taken.
+    token = page_csrf(client.get("/settings"))
+    response = client.post(
+        "/admin/users/add",
+        data={
+            "username": "PRIYA",
+            "password": "otherpass123",
+            "confirm_password": "otherpass123",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert "username_taken" in response.headers["location"]
+    assert database.get_user_by_username("PRIYA") is None
+
+    # A user may still re-case their own username.
+    token = page_csrf(client.get("/settings"))
+    response = client.post(
+        "/settings/credentials",
+        data={
+            "current_password": "secret",
+            "new_username": "Admin",
+            "new_password": "newsecret123",
+            "confirm_password": "newsecret123",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert "credentials_updated" in response.headers["location"]
+    assert main.valid_login("Admin", "newsecret123")
+
+
 def test_login_lockout_after_repeated_failures(tmp_path):
     client = client_with_db(tmp_path)
     main.login_failures.clear()
