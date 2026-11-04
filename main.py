@@ -34,6 +34,7 @@ SESSION_COOKIE = "session_token"
 SESSION_MAX_AGE = 7 * 24 * 3600  # 7 days
 LOGIN_LOCKOUT_THRESHOLD = 5
 LOGIN_LOCKOUT_MAX_SECONDS = 900
+LOGIN_FAILURE_TTL = 3600  # forget failure counts an hour after the last attempt
 login_failures = {}
 TRANSACTION_TYPES = {"expense", "income"}
 TRANSACTION_STATUSES = {"completed", "pending"}
@@ -170,23 +171,34 @@ def login_throttle_key(request, username):
 
 
 def login_is_locked(key):
-    _, locked_until = login_failures.get(key, (0, 0.0))
+    _, _, locked_until = login_failures.get(key, (0, 0.0, 0.0))
     return time.time() < locked_until
 
 
 def login_lockout_remaining(key):
-    _, locked_until = login_failures.get(key, (0, 0.0))
+    _, _, locked_until = login_failures.get(key, (0, 0.0, 0.0))
     return max(int(locked_until - time.time()), 0)
 
 
 def record_login_failure(key):
-    count, _ = login_failures.get(key, (0, 0.0))
+    now = time.time()
+    # Drop counts that fully aged out so the table cannot grow without
+    # bound on a public login endpoint.
+    stale = [
+        stored_key
+        for stored_key, (_, last_seen, _) in login_failures.items()
+        if last_seen < now - LOGIN_FAILURE_TTL
+    ]
+    for stored_key in stale:
+        login_failures.pop(stored_key, None)
+
+    count, _, _ = login_failures.get(key, (0, 0.0, 0.0))
     count += 1
     if count >= LOGIN_LOCKOUT_THRESHOLD:
         backoff = min(30 * (2 ** (count - LOGIN_LOCKOUT_THRESHOLD)), LOGIN_LOCKOUT_MAX_SECONDS)
     else:
         backoff = 0
-    login_failures[key] = (count, time.time() + backoff)
+    login_failures[key] = (count, now, now + backoff)
 
 
 def clear_login_failures(key):

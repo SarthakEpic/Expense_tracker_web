@@ -3,6 +3,7 @@ import os
 import re
 import sqlite3
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -475,6 +476,27 @@ def test_login_lockout_after_repeated_failures(tmp_path):
         )
         assert response.status_code == 429
         assert "Too many failed attempts" in response.text
+    finally:
+        main.login_failures.clear()
+
+
+def test_login_failures_are_pruned_after_ttl():
+    main.login_failures.clear()
+    try:
+        now = time.time()
+        main.login_failures["1.1.1.1|ghost"] = (
+            2,
+            now - main.LOGIN_FAILURE_TTL - 5,
+            0.0,
+        )
+        main.login_failures["2.2.2.2|recent"] = (1, now, 0.0)
+
+        main.record_login_failure("3.3.3.3|new")
+
+        # Aged-out entry is gone; recent entries and the new one are kept.
+        assert "1.1.1.1|ghost" not in main.login_failures
+        assert "2.2.2.2|recent" in main.login_failures
+        assert main.login_failures["3.3.3.3|new"][0] == 1
     finally:
         main.login_failures.clear()
 
