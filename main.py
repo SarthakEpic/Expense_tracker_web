@@ -424,7 +424,8 @@ def build_budget_rows(transactions, now, budget_limits=None):
     return rows
 
 
-def build_insights(category_totals, budgets, expenses):
+def build_insights(category_totals, budgets, expenses, now=None):
+    now = now or datetime.now()
     insights = []
     if category_totals:
         top_category, top_amount = category_totals[0]
@@ -432,6 +433,25 @@ def build_insights(category_totals, budgets, expenses):
             {
                 "title": "Top category",
                 "copy": f"{top_category} leads your completed spending at INR {inr(top_amount)}.",
+            }
+        )
+    current_period = now.strftime("%Y-%m")
+    month_total = sum(
+        item["amount"]
+        for item in expenses
+        if item["transaction_type"] == "expense" and item["date"].startswith(current_period)
+    )
+    if month_total:
+        days_in_month = monthrange(now.year, now.month)[1]
+        daily_average = month_total / now.day
+        projected_total = daily_average * days_in_month
+        insights.append(
+            {
+                "title": "Monthly pace",
+                "copy": (
+                    f"INR {inr(month_total)} spent this month — INR {inr(daily_average)} "
+                    f"per day, on pace for INR {inr(projected_total)} by month end."
+                ),
             }
         )
     if expenses:
@@ -526,6 +546,7 @@ def summarize_expenses(transactions, now=None, budget_limits=None):
     days_in_month = monthrange(now.year, now.month)[1]
     projected_total = current_expense_total / now.day * days_in_month if current_expense_total else 0.0
     projected_additional = max(projected_total - current_expense_total, 0.0)
+    daily_average_spend = current_expense_total / now.day if current_expense_total else 0.0
 
     monthly_spending = []
     for item in timeline_window:
@@ -589,6 +610,7 @@ def summarize_expenses(transactions, now=None, budget_limits=None):
         "total_savings": total_savings,
         "average_expense": total_spent / len(completed_expenses) if completed_expenses else 0.0,
         "projected_spending": projected_total,
+        "daily_average_spend": daily_average_spend,
         "pending_total": sum(
             item["amount"] for item in transactions if item["status"] == "pending"
         ),
@@ -603,7 +625,7 @@ def summarize_expenses(transactions, now=None, budget_limits=None):
         "budget_usage": current_budget_usage,
         "budget_usage_change": current_budget_usage - previous_budget_usage,
         "budget_rows": budgets,
-        "insights": build_insights(category_totals, budgets, completed_expenses),
+        "insights": build_insights(category_totals, budgets, completed_expenses, now=now),
         "monthly_timeline": monthly_timeline,
         "timeline_window": timeline_window,
         "spending_points": build_sparkline(spending_values),

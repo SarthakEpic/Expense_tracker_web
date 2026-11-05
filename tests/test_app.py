@@ -210,6 +210,12 @@ def test_income_pending_and_projection_are_real_calculations(tmp_path):
     assert summary["projected_spending"] == 300
     assert summary["monthly_spending"][0]["projection"] == 200
 
+    # Pace: 100 spent across the first 10 days of June.
+    assert summary["daily_average_spend"] == 10
+    pace = next(item for item in summary["insights"] if item["title"] == "Monthly pace")
+    assert "INR 10 per day" in pace["copy"]
+    assert "INR 300" in pace["copy"]
+
 
 def test_page_routes_render(tmp_path):
     client = client_with_db(tmp_path)
