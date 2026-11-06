@@ -5,6 +5,7 @@ import sqlite3
 import sys
 import time
 from datetime import datetime
+from html import unescape
 from pathlib import Path
 
 _TEST_DIGEST = hashlib.pbkdf2_hmac("sha256", b"secret", b"testsalt", 120_000).hex()
@@ -484,6 +485,42 @@ def test_login_lockout_after_repeated_failures(tmp_path):
         assert "Too many failed attempts" in response.text
     finally:
         main.login_failures.clear()
+
+
+def test_pagination_links_encode_special_characters(tmp_path):
+    client = client_with_db(tmp_path)
+    login(client)
+    for index in range(12):
+        home = client.get("/")
+        token = page_csrf(home)
+        response = client.post(
+            "/add",
+            data={
+                "amount": "10.00",
+                "category": "Food",
+                "description": f"Tea & snacks {index}",
+                "transaction_type": "expense",
+                "status": "completed",
+                "transaction_date": "2026-06-10T10:00",
+                "csrf_token": token,
+            },
+            follow_redirects=False,
+        )
+        assert response.status_code == 302
+
+    page = client.get("/transactions", params={"search": "Tea & snacks", "sort": "oldest"})
+    assert page.status_code == 200
+    # The Next link keeps the encoded search term instead of breaking the query string.
+    assert "search=Tea+%26+snacks" in page.text
+
+    match = re.search(r'href="(/transactions\?[^"]*page=2[^"]*)"', page.text)
+    assert match
+    # Browsers resolve &amp; entities in href attributes back to & before requesting.
+    followed = client.get(unescape(match.group(1)))
+    assert followed.status_code == 200
+    assert "Page 2 of 2" in followed.text
+    # The search filter survived the page jump.
+    assert "Tea &amp; snacks" in followed.text
 
 
 def test_login_failures_are_pruned_after_ttl():

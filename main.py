@@ -11,7 +11,7 @@ from io import StringIO
 from math import isfinite
 from secrets import compare_digest, token_urlsafe
 
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, status
@@ -757,6 +757,14 @@ def parse_transaction_sort(transactions, sort):
     return sorted(transactions, key=lambda item: item["date"], reverse=True)
 
 
+def transaction_list_url(filters, page):
+    """Pagination URL with filter values URL-encoded (spaces, &, +, ...)."""
+    query = dict(filters)
+    query["page"] = page
+    query = {key: value for key, value in query.items() if value not in ("", None)}
+    return "/transactions?" + urlencode(query)
+
+
 def filter_transactions(transactions, search="", category="", transaction_type="", status="", date_from="", date_to=""):
     filtered = transactions
     if search:
@@ -992,6 +1000,15 @@ async def transactions_page(
 
     context = build_shared_context(request, "transactions", all_expenses, filtered)
 
+    filters = {
+        "search": search,
+        "category": category,
+        "transaction_type": transaction_type,
+        "status": status,
+        "date_from": date_from,
+        "date_to": date_to,
+        "sort": sort,
+    }
     context.update(
         {
             "expenses": page_items,
@@ -1005,6 +1022,7 @@ async def transactions_page(
             "page_number": page,
             "page_count": page_count,
             "total_transactions": len(ordered),
+            "page_url": lambda page_number: transaction_list_url(filters, page_number),
         }
     )
     return render_page(request, "transactions.html", context)
