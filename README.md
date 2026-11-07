@@ -18,12 +18,15 @@ A self-hosted personal finance and expense tracking dashboard built with **FastA
 - **Invite-only workspace:** the first account is created via `/register` (or seeded from env credentials); after that, only the admin can add users — no public sign-up on a money app.
 - **Admin controls in Settings:** add users, reset a forgotten password for any member (that's the built-in "forgot password" flow), and delete accounts along with their data.
 - **Per-user defaults:** each new account starts with its own budget limits, fully editable.
+- **Case-safe usernames:** usernames are unique regardless of letter case, so "Priya" and "priya" can never be two different accounts.
 
 ### 📒 Transaction Ledger & Cash Flow
 - Record both **expenses** and **income** with custom categories, dates, merchants, and descriptions.
 - Track settlement states with **completed** vs. **pending** transactions.
 - Fast multi-filter queries by search keyword, category, transaction type, status, and date range (`date_from` / `date_to`).
 - Multi-column sorting (newest, oldest, amount high/low, category) and paginated browsing.
+- **Pagination that keeps filters:** page links URL-encode search terms (spaces, `&`, `+`), so special-character searches survive page jumps.
+- Success confirmations when a transaction is added or deleted, on top of validation warnings.
 - Slide-over quick action drawer for seamless transaction logging from any view.
 
 ### 🎯 Dynamic Category Budgeting
@@ -39,18 +42,20 @@ A self-hosted personal finance and expense tracking dashboard built with **FastA
 - **Spending Pacing:** Monthly bar chart displaying actual spending alongside linear month-end projections.
 - **Category Concentration:** SVG/CSS conic donut chart showing spending distribution across primary categories.
 - **Net Momentum:** Sparklines calculating net savings and month-over-month percentage change.
+- **Spending Pace:** the dashboard watchlist shows the daily average spend and the month-end total the current pace lands on.
 - Zero client-side charting libraries (no Chart.js, D3, or Matplotlib dependencies) — all charts render directly via native CSS and SVG.
 
 ### 📄 Reports & CSV Exports
 - Rolling summaries covering **Monthly**, **Quarterly** (last 3 months), and **Yearly** (12-month rolling) net savings.
 - Filter-aware CSV export with dynamic timestamped filenames (`expenses-YYYYMMDD-HHMMSS.csv`).
+- **Excel-ready exports:** CSVs are written with a UTF-8 BOM and charset header, so ₹ symbols and accented text open correctly in Excel instead of mojibake.
 
 ### 🛡️ Security & Privacy
 - **Zero Cloud Tracking:** All financial data remains in your own database (local SQLite file, or your own Neon Postgres in the cloud).
 - **PBKDF2 Password Hashing:** Credentials hashed with `hashlib.pbkdf2_hmac` (`sha256`, 120,000 iterations, random salt).
 - **In-App Credential Management:** Change username and password from **Settings → Login credentials** — stored in the database, effective immediately, no redeploy.
 - **Invite-Only Access:** No open registration; the admin manages who gets an account, with brute-force lockout on repeated failed logins.
-- **Brute-Force Lockout:** Repeated failed logins trigger an escalating time lockout per IP + username.
+- **Brute-Force Lockout:** Repeated failed logins trigger an escalating time lockout per IP + username, with failure counts expired after an hour so tracking memory stays bounded.
 - **Cryptographically Signed Sessions:** HTTP-only cookies signed with `URLSafeTimedSerializer` and strict 7-day expiration.
 - **CSRF Defense:** Double-submit cookie verification across all mutating form requests.
 - **Hardened Navigation:** Open-redirect defense via server-side `Referer` host validation.
